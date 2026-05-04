@@ -1,0 +1,61 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+
+# Android
+android/.gradle/
+android/app/debug/
+android/app/profile/
+android/app/release/
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/
+
+# IDE
+.idea/
+.vscode/
+.claude/
+CLAUDE.md
+ROADMAP.md
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.logkey.properties
+*.jks
+*.keystore
+
+# Flutter / Android generated
+.flutter-plugins-dependencies
+android/.kotlin/
+android/.gradle/
+
+# Build artifacts
+*.apk
+*.aab
+*.ipa
+
+# Firebase / Google services config — per-developer, regenerate locally
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+# Per-machine gradle config
+android/gradle.properties
+
+# Local stray files (worktree scratch, test screenshots, scripts)
+tree.txt
+strip_comments.py
+flutter_*.png
+.github/java-upgrade/

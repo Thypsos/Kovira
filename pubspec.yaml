@@ -1,0 +1,37 @@
+name: kovira
+description: 'Kovira - personal ledger for mixed cash and digital economies'
+publish_to: 'none'
+version: 3.0.1+190
+
+environment:
+    sdk: ^3.10.4
+
+dependencies:
+    flutter:
+        sdk: flutter
+    sqflite: ^2.3.3
+    path: ^1.9.0
+    intl: ^0.19.0
+    cupertino_icons: ^1.0.8
+    path_provider: ^2.1.4
+    share_plus: ^10.1.4
+    google_sign_in: ^6.2.2
+    googleapis: ^13.2.0
+    http: ^1.2.2
+    file_picker: ^8.1.7
+    shared_preferences: ^2.3.3
+    encrypt: ^5.0.3
+    crypto: ^3.0.3
+    pointycastle: ^3.9.1
+    flutter_local_notifications: ^17.2.4
+    timezone: ^0.9.4
+
+dev_dependencies:
+    flutter_test:
+        sdk: flutter
+    flutter_lints: ^6.0.0
+
+flutter:
+    uses-material-design: true
+    assets:
+        - assets/logo.png
