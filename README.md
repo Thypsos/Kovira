@@ -91,11 +91,6 @@ Coming soon.
 
 **Google Play** — coming soon.
 
-**Sideload (Android)** — download the latest APK from
-[Releases](https://github.com/Thypsos/Kovira/releases) and install it on
-your phone. You'll need to allow "Install from unknown sources" once for
-your file manager or browser.
-
 **iOS** — not yet. Planned, no date.
 
 ## Permissions and what they do
