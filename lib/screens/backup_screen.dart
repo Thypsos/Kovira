@@ -289,10 +289,12 @@ class _BackupScreenState extends State<BackupScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark
         ? Colors.green.withValues(alpha: 0.12)
-        : Colors.green.shade50;
+        : Color.lerp(Colors.green, Colors.white, 0.20)!;
     final borderCol = isDark
         ? Colors.green.withValues(alpha: 0.35)
-        : Colors.green.shade200;
+        : Color.lerp(Colors.green, Colors.white, 0.05)!;
+    final fg = isDark ? cs.onSurface : Colors.white;
+    final iconColor = isDark ? Colors.green : Colors.white;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -302,15 +304,26 @@ class _BackupScreenState extends State<BackupScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.check_circle, color: Colors.green, size: 22),
+          Icon(Icons.check_circle, color: iconColor, size: 22),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               'Signed in as $_googleUserEmail',
-              style: TextStyle(fontSize: 14, color: cs.onSurface),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: fg,
+              ),
             ),
           ),
-          TextButton(onPressed: _signOut, child: const Text('Sign out')),
+          TextButton(
+            onPressed: _signOut,
+            style: TextButton.styleFrom(foregroundColor: fg),
+            child: const Text(
+              'Sign out',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
         ],
       ),
     );
@@ -356,15 +369,20 @@ class _BackupScreenState extends State<BackupScreen> {
     required Color iconColor,
     required String title,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final chipBg = isDark
+        ? iconColor.withValues(alpha: 0.15)
+        : Color.lerp(iconColor, Colors.white, 0.18)!;
+    final chipFg = isDark ? iconColor : Colors.white;
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: iconColor.withValues(alpha: 0.15),
+            color: chipBg,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, size: 18, color: iconColor),
+          child: Icon(icon, size: 18, color: chipFg),
         ),
         const SizedBox(width: 10),
         Text(
@@ -384,6 +402,24 @@ class _BackupScreenState extends State<BackupScreen> {
     bool loading = false,
   }) {
     final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark
+        ? color.withValues(alpha: 0.10)
+        : Color.lerp(color, Colors.white, 0.18)!;
+    final borderCol = isDark
+        ? color.withValues(alpha: 0.30)
+        : Color.lerp(color, Colors.white, 0.05)!;
+    final fg = isDark ? color : Colors.white;
+    final chipBg = isDark
+        ? color.withValues(alpha: 0.18)
+        : Colors.white.withValues(alpha: 0.22);
+    final labelColor = isDark ? cs.onSurface : Colors.white;
+    final subtitleColor = isDark
+        ? cs.onSurface.withValues(alpha: 0.6)
+        : Colors.white.withValues(alpha: 0.85);
+    final chevronColor = isDark
+        ? cs.onSurface.withValues(alpha: 0.35)
+        : Colors.white.withValues(alpha: 0.7);
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: loading ? null : onTap,
@@ -391,16 +427,16 @@ class _BackupScreenState extends State<BackupScreen> {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.10),
+          color: bg,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withValues(alpha: 0.30)),
+          border: Border.all(color: borderCol),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.18),
+                color: chipBg,
                 shape: BoxShape.circle,
               ),
               child: loading
@@ -409,10 +445,10 @@ class _BackupScreenState extends State<BackupScreen> {
                       height: 22,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: color,
+                        color: fg,
                       ),
                     )
-                  : Icon(icon, color: color, size: 22),
+                  : Icon(icon, color: fg, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -422,9 +458,10 @@ class _BackupScreenState extends State<BackupScreen> {
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
+                      color: labelColor,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -432,16 +469,14 @@ class _BackupScreenState extends State<BackupScreen> {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: cs.onSurface.withValues(alpha: 0.6),
+                      fontWeight: FontWeight.w600,
+                      color: subtitleColor,
                     ),
                   ),
                 ],
               ),
             ),
-            Icon(
-              Icons.chevron_right,
-              color: cs.onSurface.withValues(alpha: 0.35),
-            ),
+            Icon(Icons.chevron_right, color: chevronColor),
           ],
         ),
       ),

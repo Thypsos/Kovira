@@ -637,10 +637,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _themeBtn(String label, ThemeMode mode, ColorScheme cs) {
     final sel = _theme == mode;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final unselectedBg = isDark
+        ? cs.surfaceContainerHighest
+        : Color.lerp(cs.primary, Colors.white, 0.78)!;
+    final unselectedBorder = isDark
+        ? Colors.transparent
+        : Color.lerp(cs.primary, Colors.white, 0.55)!;
     return Expanded(
       child: GestureDetector(
         onTap: () => _setTheme(mode),
-
         child: AnimatedScale(
           duration: const Duration(milliseconds: 160),
           scale: sel ? 1.04 : 1.0,
@@ -650,8 +656,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             curve: Curves.easeOut,
             padding: const EdgeInsets.symmetric(vertical: 10),
             decoration: BoxDecoration(
-              color: sel ? cs.primary : cs.surfaceContainerHighest,
+              color: sel ? cs.primary : unselectedBg,
               borderRadius: BorderRadius.circular(10),
+              border: sel
+                  ? null
+                  : Border.all(color: unselectedBorder, width: 1),
               boxShadow: sel
                   ? [
                       BoxShadow(
