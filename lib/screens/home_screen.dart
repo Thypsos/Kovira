@@ -1168,11 +1168,6 @@ class _HomeScreenState extends State<HomeScreen> implements ShellRefreshable {
     required Color fill,
     required Color onCard,
   }) {
-    // Two text layers stacked at the same position: black on the
-    // unfilled gray track, white clipped to the filled portion. As
-    // the bar fills, the black-on-light gives way to white-on-fill
-    // at the exact same x-position, so the text never sits on a
-    // colour it can't read against.
     final clamped = ratio.clamp(0.0, 1.0);
     const textStyle = TextStyle(
       fontSize: 10.75,

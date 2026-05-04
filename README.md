@@ -118,29 +118,6 @@ No permission is requested unless you actually use the feature it powers.
 - **Material 3** — light and dark themes with adaptive colour accents
 - No third-party analytics, crash reporters, or ad SDKs
 
-## Development
-
-```bash
-git clone https://github.com/Thypsos/Kovira.git
-cd Kovira
-flutter pub get
-flutter run
-```
-
-To run the Google Drive backup feature locally, you'll need your own
-Firebase project:
-
-1. Create a project at https://console.firebase.google.com
-2. Add an Android app with package name `com.glosper.kovira`
-3. Add your debug keystore SHA-1 (and release SHA-1 if you sign release
-   builds): `keytool -list -v -keystore <path-to-keystore>`
-4. Download `google-services.json` and place it in `android/app/`
-5. On the OAuth consent screen, add the `.../auth/drive.file` scope and
-   publish the app. This scope is non-sensitive, so no verification is
-   needed.
-
-The rest of the app runs with no cloud configuration.
-
 Bugs and feature requests go in [Issues](https://github.com/Thypsos/Kovira/issues).
 PRs welcome for fixes; for new features please open an issue first so we
 can discuss scope.
