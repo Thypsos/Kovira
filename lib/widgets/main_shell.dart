@@ -9,12 +9,77 @@ import '../screens/bills_screen.dart';
 import '../screens/category_editor_screen.dart';
 import '../screens/budget_screen.dart';
 import '../screens/goals_screen.dart';
+import '../app.dart';
+import '../data/settings_service.dart';
 import '../tutorial/tutorial_ids.dart';
 import '../tutorial/tutorial_service.dart';
+import 'live_icon.dart';
 import 'main_menu_sheet.dart';
+import 'main_tab_bar.dart';
 
 abstract class ShellRefreshable {
   void refreshFromShell();
+}
+
+abstract class ShellPrimaryAction {
+  void firePrimaryAction();
+}
+
+Widget shellBottomBar(Widget dedicated, {required MainScreen current}) {
+  return ValueListenableBuilder<BottomBarMode>(
+    valueListenable: bottomBarModeNotifier,
+    builder: (_, mode, _) {
+      if (mode != BottomBarMode.dedicated) return const SizedBox.shrink();
+      return dedicated;
+    },
+  );
+}
+
+class _ShellPageBubbles extends StatelessWidget {
+  final MainScreen current;
+  const _ShellPageBubbles({required this.current});
+
+  static const _order = [
+    MainScreen.records,
+    MainScreen.budget,
+    MainScreen.accounts,
+    MainScreen.dashboard,
+    MainScreen.bills,
+    MainScreen.categories,
+    MainScreen.goals,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: _order.map((s) {
+        final color = MainScreenChrome.of(s).color;
+        final active = s == current;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          width: active ? 14 : 8,
+          height: 8,
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          decoration: BoxDecoration(
+            color: active ? color : color.withValues(alpha: 0.40),
+            borderRadius: BorderRadius.circular(4),
+            boxShadow: active
+                ? [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.55),
+                      blurRadius: 8,
+                      spreadRadius: 0.5,
+                    ),
+                  ]
+                : null,
+          ),
+        );
+      }).toList(),
+    );
+  }
 }
 
 Widget? buildShellBackButton(BuildContext context) {
@@ -22,19 +87,88 @@ Widget? buildShellBackButton(BuildContext context) {
   final target = shell?.backTarget;
   if (shell == null || target == null) return null;
   final chrome = MainScreenChrome.of(target);
-  return IconButton(
-    icon: Icon(chrome.icon, color: chrome.color),
-    tooltip: 'Back to ${chrome.label}',
-    onPressed: shell.back,
+  return InkWell(
+    onTap: shell.back,
+    borderRadius: BorderRadius.circular(20),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.arrow_back, size: 20, color: chrome.color),
+          const SizedBox(width: 4),
+          PulsingGlowIcon(
+            icon: chrome.icon,
+            size: 20,
+            color: chrome.color,
+            glowColor: chrome.color,
+            maxBlur: 14,
+            minOpacity: 0.30,
+            maxOpacity: 0.75,
+            duration: const Duration(milliseconds: 1400),
+          ),
+        ],
+      ),
+    ),
   );
 }
 
 Widget buildModalBackButton(BuildContext context) {
   final chrome = MainScreenChrome.of(MainShell.currentScreen);
-  return IconButton(
-    icon: Icon(chrome.icon, color: chrome.color),
-    tooltip: 'Back to ${chrome.label}',
-    onPressed: () => Navigator.of(context).pop(),
+  return InkWell(
+    onTap: () => Navigator.of(context).pop(),
+    borderRadius: BorderRadius.circular(20),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.arrow_back, size: 20, color: chrome.color),
+          const SizedBox(width: 4),
+          PulsingGlowIcon(
+            icon: chrome.icon,
+            size: 20,
+            color: chrome.color,
+            glowColor: chrome.color,
+            maxBlur: 14,
+            minOpacity: 0.30,
+            maxOpacity: 0.75,
+            duration: const Duration(milliseconds: 1400),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget buildModalBackButtonTo(
+  BuildContext context,
+  IconData icon,
+  Color color,
+) {
+  return InkWell(
+    onTap: () => Navigator.of(context).pop(),
+    borderRadius: BorderRadius.circular(20),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.arrow_back, size: 20, color: color),
+          const SizedBox(width: 4),
+          PulsingGlowIcon(
+            icon: icon,
+            size: 20,
+            color: color,
+            glowColor: color,
+            maxBlur: 14,
+            minOpacity: 0.30,
+            maxOpacity: 0.75,
+            duration: const Duration(milliseconds: 1400),
+          ),
+        ],
+      ),
+    ),
   );
 }
 
@@ -49,12 +183,6 @@ class MainShell extends StatefulWidget {
 
   static MainScreen currentScreen = MainScreen.dashboard;
 
-  // Back-channel to the live shell so modal routes (Settings,
-  // BackupScreen) that wipe or replace the DB can force every shell
-  // page to reload its data without going through the page-change
-  // event. Without this, only the page underneath the modal route
-  // refreshes when the modal pops; the other six pages keep their
-  // stale state until the user swipes to them.
   static MainShellState? _activeState;
   static void refreshAllPages() => _activeState?._refreshAll();
 }
@@ -236,10 +364,6 @@ class MainShellState extends State<MainShell>
     });
   }
 
-  // Walk every shell-page key and ask its State to reload. Safe to
-  // call from anywhere — checks each State for ShellRefreshable
-  // before invoking, and silently skips pages that haven't been
-
   void _refreshAll() {
     final keys = [
       _recordsKey,
@@ -253,6 +377,38 @@ class MainShellState extends State<MainShell>
     for (final k in keys) {
       final s = k.currentState;
       if (s is ShellRefreshable) (s as ShellRefreshable).refreshFromShell();
+    }
+  }
+
+  MainScreen get currentPage => _current;
+
+  void fireCurrentPagePrimaryAction() {
+    final State? s;
+    switch (_current) {
+      case MainScreen.records:
+        s = _recordsKey.currentState;
+        break;
+      case MainScreen.budget:
+        s = _budgetKey.currentState;
+        break;
+      case MainScreen.accounts:
+        s = _accountsKey.currentState;
+        break;
+      case MainScreen.dashboard:
+        s = _dashboardKey.currentState;
+        break;
+      case MainScreen.bills:
+        s = _billsKey.currentState;
+        break;
+      case MainScreen.categories:
+        s = _categoriesKey.currentState;
+        break;
+      case MainScreen.goals:
+        s = _goalsKey.currentState;
+        break;
+    }
+    if (s is ShellPrimaryAction) {
+      (s as ShellPrimaryAction).firePrimaryAction();
     }
   }
 
@@ -367,43 +523,70 @@ class MainShellState extends State<MainShell>
 
   @override
   Widget build(BuildContext context) {
+    final body = Stack(
+      children: [
+        PageView(
+          controller: _pageCtrl,
+          onPageChanged: _onPageChanged,
+          physics: _shellSwipeLocked
+              ? const NeverScrollableScrollPhysics()
+              : const _ShellPageScrollPhysics(),
+          children: [
+            RecordsScreen(key: _recordsKey),
+            BudgetScreen(key: _budgetKey),
+            IncomeSourcesScreen(key: _accountsKey),
+            HomeScreen(key: _dashboardKey),
+            BillsScreen(key: _billsKey),
+            CategoryEditorScreen(key: _categoriesKey),
+            GoalsScreen(key: _goalsKey),
+          ],
+        ),
+        IgnorePointer(
+          child: AnimatedBuilder(
+            animation: _jumpFade,
+            builder: (_, _) => Opacity(
+              opacity: _jumpFade.value,
+              child: Container(
+                color: Theme.of(context).scaffoldBackgroundColor,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         _handleSystemPop();
       },
-      child: Stack(
-        children: [
-          PageView(
-            controller: _pageCtrl,
-            onPageChanged: _onPageChanged,
-            physics: _shellSwipeLocked
-                ? const NeverScrollableScrollPhysics()
-                : const _ShellPageScrollPhysics(),
+      child: ValueListenableBuilder<BottomBarMode>(
+        valueListenable: bottomBarModeNotifier,
+        builder: (_, mode, _) {
+          final scaffold = Scaffold(
+            backgroundColor: Colors.transparent,
+            body: body,
+            bottomNavigationBar: mode == BottomBarMode.tabs
+                ? MainTabBar(current: _current)
+                : null,
+          );
+          if (mode != BottomBarMode.dedicated) return scaffold;
+          final safeBottom = MediaQuery.paddingOf(context).bottom;
+          return Stack(
             children: [
-              RecordsScreen(key: _recordsKey),
-              BudgetScreen(key: _budgetKey),
-              IncomeSourcesScreen(key: _accountsKey),
-              HomeScreen(key: _dashboardKey),
-              BillsScreen(key: _billsKey),
-              CategoryEditorScreen(key: _categoriesKey),
-              GoalsScreen(key: _goalsKey),
-            ],
-          ),
-
-          IgnorePointer(
-            child: AnimatedBuilder(
-              animation: _jumpFade,
-              builder: (_, _) => Opacity(
-                opacity: _jumpFade.value,
-                child: Container(
-                  color: Theme.of(context).scaffoldBackgroundColor,
+              scaffold,
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: safeBottom + 88,
+                child: IgnorePointer(
+                  child: _ShellPageBubbles(current: _current),
                 ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }

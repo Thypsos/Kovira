@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
 import '../models/category.dart';
@@ -21,7 +22,10 @@ class BudgetScreen extends StatefulWidget {
 }
 
 class _BudgetScreenState extends State<BudgetScreen>
-    implements ShellRefreshable {
+    implements ShellRefreshable, ShellPrimaryAction {
+  @override
+  void firePrimaryAction() => _pickCategoryToBudget();
+
   @override
   void refreshFromShell() => _load();
 
@@ -69,12 +73,15 @@ class _BudgetScreenState extends State<BudgetScreen>
             TutorialIds.budgetDialogFields,
           ),
           contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-          title: Row(
-            children: [
-              RawCategoryIcon(icon: c.icon, color: c.color, size: 22),
-              const SizedBox(width: 8),
-              Flexible(child: Text(c.name, overflow: TextOverflow.ellipsis)),
-            ],
+          title: Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                RawCategoryIcon(icon: c.icon, color: c.color, size: 22),
+                const SizedBox(width: 8),
+                Flexible(child: Text(c.name, overflow: TextOverflow.ellipsis)),
+              ],
+            ),
           ),
 
           content: ConstrainedBox(
@@ -159,52 +166,102 @@ class _BudgetScreenState extends State<BudgetScreen>
 
     final picked = await showDialog<Category>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        contentPadding: const EdgeInsets.fromLTRB(0, 16, 0, 0),
-        title: const Text(
-          'Set budget for…',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        ),
-        content: SizedBox(
-          width: 320,
-
-          height: MediaQuery.of(ctx).size.height * 0.55,
-          child: list.isEmpty
-              ? const Center(
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 24,
+          ),
+          contentPadding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+          content: list.isEmpty
+              ? const SizedBox(
+                  width: 280,
                   child: Padding(
                     padding: EdgeInsets.all(20),
                     child: Text(
-                      'No categories yet — add one from the Categories '
-                      'page first.',
+                      'No tags yet — add one from the Tags page first.',
                       textAlign: TextAlign.center,
                     ),
                   ),
                 )
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: list.length,
-                  itemBuilder: (_, i) {
-                    final c = list[i];
-                    return ListTile(
-                      leading: RawCategoryIcon(
-                        icon: c.icon,
-                        color: c.color,
-                        size: 24,
+              : Builder(
+                  builder: (bc) {
+                    final n = list.length;
+                    const dialogWidth = 320.0;
+                    const padding = 16.0;
+                    const gap = 8.0;
+                    final cols = math.min(3, n);
+                    final available = dialogWidth - padding;
+                    final tileSize = math.min(
+                      110.0,
+                      math.max(70.0, (available - (cols - 1) * gap) / cols),
+                    );
+                    final iconSize = (tileSize * 0.42).clamp(22.0, 56.0);
+                    final tileFontSize = (tileSize * 0.10).clamp(10.0, 14.0);
+                    final maxH = MediaQuery.of(bc).size.height * 0.55;
+                    return ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: dialogWidth,
+                        maxHeight: maxH,
                       ),
-                      title: Text(c.name),
-                      onTap: () => Navigator.pop(ctx, c),
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: gap,
+                            runSpacing: gap,
+                            children: list.map((c) {
+                              return GestureDetector(
+                                onTap: () => Navigator.pop(ctx, c),
+                                child: SizedBox(
+                                  width: tileSize,
+                                  height: tileSize,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        width: tileSize * 0.65,
+                                        height: tileSize * 0.65,
+                                        decoration: BoxDecoration(
+                                          color: cs.surfaceContainerHighest,
+                                          borderRadius: BorderRadius.circular(
+                                            tileSize * 0.14,
+                                          ),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          c.icon,
+                                          style: TextStyle(fontSize: iconSize),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Flexible(
+                                        child: Text(
+                                          c.name,
+                                          style: TextStyle(
+                                            fontSize: tileFontSize,
+                                            fontWeight: FontWeight.w500,
+                                            color: cs.onSurface,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
                     );
                   },
                 ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
+        );
+      },
     );
     if (picked != null) await _editBudget(picked);
   }
@@ -228,6 +285,8 @@ class _BudgetScreenState extends State<BudgetScreen>
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 8,
+        leadingWidth: 80,
+        centerTitle: true,
         leading: buildShellBackButton(context),
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -281,7 +340,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Cap your spending per category to keep an eye on the month.',
+                      'Cap your spending per tag to keep an eye on the month.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,
@@ -308,19 +367,22 @@ class _BudgetScreenState extends State<BudgetScreen>
                 }),
               ],
             ),
-      bottomNavigationBar: TutorialTarget(
-        id: TutorialTargetIds.budgetAddBtn,
-        child: BigActionButton(
-          icon: Icons.pie_chart_outline,
-          tint: Colors.deepOrange,
-          tooltip: 'Set a category budget · swipe up for menu',
-          onTap: _pickCategoryToBudget,
-          onSwipeUp: () =>
-              showMainMenuSheet(context, current: MainScreen.budget),
-          onLongPress: () => MainShell.maybeOf(
-            context,
-          )?.gotoPage(MainScreen.dashboard, animate: false, fade: true),
+      bottomNavigationBar: shellBottomBar(
+        TutorialTarget(
+          id: TutorialTargetIds.budgetAddBtn,
+          child: BigActionButton(
+            icon: Icons.pie_chart_outline,
+            tint: Colors.deepOrange,
+            tooltip: 'Set a tag budget · swipe up for menu',
+            onTap: _pickCategoryToBudget,
+            onSwipeUp: () =>
+                showMainMenuSheet(context, current: MainScreen.budget),
+            onLongPress: () => MainShell.maybeOf(
+              context,
+            )?.gotoPage(MainScreen.dashboard, animate: false, fade: true),
+          ),
         ),
+        current: MainScreen.budget,
       ),
     );
   }

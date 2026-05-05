@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+enum BottomBarMode { tabs, dedicated }
+
 class SettingsService {
   SettingsService._();
   static final SettingsService instance = SettingsService._();
@@ -12,6 +14,7 @@ class SettingsService {
   static const _keySmartDecimals = 'smart_decimals';
   static const _keyWelcomeSeen = 'welcome_seen';
   static const _keyAssistedMode = 'assisted_mode';
+  static const _keyBottomBarMode = 'bottom_bar_mode';
 
   bool _useThousandSep = true;
   bool _smartDecimals = true;
@@ -92,6 +95,21 @@ class SettingsService {
         await prefs.setString(_keyTheme, 'system');
         break;
     }
+  }
+
+  Future<BottomBarMode> getBottomBarMode() async {
+    final sp = await SharedPreferences.getInstance();
+    final s = sp.getString(_keyBottomBarMode);
+    if (s == 'dedicated') return BottomBarMode.dedicated;
+    return BottomBarMode.tabs;
+  }
+
+  Future<void> setBottomBarMode(BottomBarMode mode) async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString(
+      _keyBottomBarMode,
+      mode == BottomBarMode.dedicated ? 'dedicated' : 'tabs',
+    );
   }
 
   Future<bool> hasAskedNotifPerm() async {

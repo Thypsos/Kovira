@@ -44,7 +44,7 @@ class TutorialMessages {
       title: 'Swipe between pages',
       body:
           'Swipe left or right anywhere on a page to move between '
-          'Records, Budget, Income Sources, Dashboard, Bills, Categories, '
+          'Records, Budget, Income Sources, Expenses, Bills, Tags, '
           'and Goals.',
     ),
 
@@ -133,9 +133,9 @@ class TutorialMessages {
     TutorialIds.entryCategoryIntro: TutorialMessage(
       id: TutorialIds.entryCategoryIntro,
       targetId: TutorialTargetIds.entryCategoryPicker,
-      title: 'Pick a category',
+      title: 'Pick a tag',
       body:
-          'Categories help the Records and Budget pages summarise '
+          'Tags help the Records and Budget pages summarise '
           'your spending. Long-press to manage them.',
     ),
     TutorialIds.entryAmountInput: TutorialMessage(
@@ -151,7 +151,7 @@ class TutorialMessages {
       targetId: TutorialTargetIds.entryNameChip,
       title: 'Name it (optional)',
       body:
-          'Tap to add a custom name. The category name is used by '
+          'Tap to add a custom name. The tag name is used by '
           'default.',
     ),
 
@@ -161,7 +161,7 @@ class TutorialMessages {
       title: 'This month\'s spending',
       body:
           'Paid expenses for the current month land here, grouped by '
-          'category.',
+          'tag.',
     ),
     TutorialIds.dashDueSection: TutorialMessage(
       id: TutorialIds.dashDueSection,
@@ -197,7 +197,7 @@ class TutorialMessages {
     TutorialIds.categoriesAddBtn: TutorialMessage(
       id: TutorialIds.categoriesAddBtn,
       targetId: TutorialTargetIds.categoriesAddBtn,
-      title: 'Manage categories',
+      title: 'Manage tags',
       body:
           'Add, rename, or delete the buckets your spending falls '
           'into.',
@@ -205,7 +205,7 @@ class TutorialMessages {
     TutorialIds.catDialogFields: TutorialMessage(
       id: TutorialIds.catDialogFields,
       targetId: TutorialTargetIds.catDialogName,
-      title: 'Name the category',
+      title: 'Name the tag',
       body:
           'A short descriptive name works best — Records and Budget '
           'will group your spending under it.',
@@ -215,7 +215,7 @@ class TutorialMessages {
       targetId: TutorialTargetIds.catsFirstCard,
       title: 'Tap to open',
       body:
-          'Tapping a category opens its full entry list. Long-press '
+          'Tapping a tag opens its full entry list. Long-press '
           'to rename, re-emoji, or delete.',
     ),
     TutorialIds.goalsAddBtn: TutorialMessage(
@@ -245,7 +245,7 @@ class TutorialMessages {
       targetId: TutorialTargetIds.budgetAddBtn,
       title: 'Monthly budgets',
       body:
-          'Cap how much each category can spend in a month. Overrides '
+          'Cap how much each tag can spend in a month. Overrides '
           'work per-month if a single month is special.',
     ),
     TutorialIds.budgetDialogFields: TutorialMessage(
@@ -253,7 +253,7 @@ class TutorialMessages {
       targetId: TutorialTargetIds.budgetDialogField,
       title: 'Set the cap',
       body:
-          'Type the maximum this category can spend in a month. '
+          'Type the maximum this tag can spend in a month. '
           'Tap Clear later to remove the cap.',
     ),
     TutorialIds.budgetCardTapHint: TutorialMessage(

@@ -8,6 +8,9 @@ final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier<ThemeMode>(
   ThemeMode.system,
 );
 
+final ValueNotifier<BottomBarMode> bottomBarModeNotifier =
+    ValueNotifier<BottomBarMode>(BottomBarMode.tabs);
+
 class KoviraApp extends StatefulWidget {
   const KoviraApp({super.key});
   @override
@@ -27,8 +30,10 @@ class _KoviraAppState extends State<KoviraApp> {
   Future<void> _loadSettings() async {
     final mode = await SettingsService.instance.getThemeMode();
     final seen = await SettingsService.instance.hasSeenWelcome();
+    final barMode = await SettingsService.instance.getBottomBarMode();
     if (mounted) {
       themeModeNotifier.value = mode;
+      bottomBarModeNotifier.value = barMode;
       setState(() {
         _welcomeSeen = seen;
         _loaded = true;

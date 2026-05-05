@@ -90,9 +90,12 @@ const categoryIconPalette = [
 ];
 
 class _CategoryEditorScreenState extends State<CategoryEditorScreen>
-    implements ShellRefreshable {
+    implements ShellRefreshable, ShellPrimaryAction {
   @override
   void refreshFromShell() => _load();
+
+  @override
+  void firePrimaryAction() => _addCategory();
   List<Category> categories = [];
   @override
   void initState() {
@@ -118,7 +121,9 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
           insetPadding: TutorialService.instance.dialogInsetsFor(
             TutorialIds.catDialogFields,
           ),
-          title: const Text('Add Category', style: TextStyle(fontSize: 20)),
+          title: const Center(
+            child: Text('Add tag', style: TextStyle(fontSize: 20)),
+          ),
           content: SizedBox(
             width: 320,
             child: TutorialFireOnMount(
@@ -148,7 +153,7 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
                                 textInputAction: TextInputAction.done,
                                 style: const TextStyle(fontSize: 17),
                                 decoration: InputDecoration(
-                                  labelText: 'Category name',
+                                  labelText: 'Tag name',
                                   hintText: 'e.g. Gym, Fuel, Rent',
                                   errorText: nameError,
                                 ),
@@ -224,17 +229,14 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
               onPressed: () {
                 final n = nameCtrl.text.trim();
                 if (n.isEmpty) {
-                  sl(() => nameError = 'Give the category a name');
+                  sl(() => nameError = 'Give the tag a name');
                   nameFocus.requestFocus();
                   return;
                 }
                 if (categories.any(
                   (c) => c.name.toLowerCase() == n.toLowerCase(),
                 )) {
-                  sl(
-                    () =>
-                        nameError = 'A category with that name already exists',
-                  );
+                  sl(() => nameError = 'A tag with that name already exists');
                   nameFocus.requestFocus();
                   return;
                 }
@@ -522,7 +524,9 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, sl) => AlertDialog(
-          title: const Text('Edit category', style: TextStyle(fontSize: 20)),
+          title: const Center(
+            child: Text('Edit tag', style: TextStyle(fontSize: 20)),
+          ),
           content: SizedBox(
             width: double.maxFinite,
             child: SingleChildScrollView(
@@ -698,6 +702,8 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 8,
+        leadingWidth: 80,
+        centerTitle: true,
         leading: buildShellBackButton(context),
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -714,7 +720,7 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
             const SizedBox(width: 8),
             const Flexible(
               child: Text(
-                'Categories',
+                'Tags',
                 style: TextStyle(fontSize: 20),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -743,7 +749,7 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
             if (n == 0) {
               return Center(
                 child: Text(
-                  'No categories yet',
+                  'No tags yet',
                   style: TextStyle(
                     color: cs.onSurface.withValues(alpha: 0.5),
                     fontSize: 16,
@@ -867,19 +873,22 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
           },
         ),
       ),
-      bottomNavigationBar: TutorialTarget(
-        id: TutorialTargetIds.categoriesAddBtn,
-        child: BigActionButton(
-          icon: Icons.category_outlined,
-          tint: Colors.purple,
-          tooltip: 'Add category · swipe up for menu',
-          onTap: _addCategory,
-          onSwipeUp: () =>
-              showMainMenuSheet(context, current: MainScreen.categories),
-          onLongPress: () => MainShell.maybeOf(
-            context,
-          )?.gotoPage(MainScreen.dashboard, animate: false, fade: true),
+      bottomNavigationBar: shellBottomBar(
+        TutorialTarget(
+          id: TutorialTargetIds.categoriesAddBtn,
+          child: BigActionButton(
+            icon: Icons.category_outlined,
+            tint: Colors.purple,
+            tooltip: 'Add tag · swipe up for menu',
+            onTap: _addCategory,
+            onSwipeUp: () =>
+                showMainMenuSheet(context, current: MainScreen.categories),
+            onLongPress: () => MainShell.maybeOf(
+              context,
+            )?.gotoPage(MainScreen.dashboard, animate: false, fade: true),
+          ),
         ),
+        current: MainScreen.categories,
       ),
     );
   }

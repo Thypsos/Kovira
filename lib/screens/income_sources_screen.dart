@@ -94,7 +94,10 @@ class IncomeSourcesScreen extends StatefulWidget {
 }
 
 class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
-    implements ShellRefreshable {
+    implements ShellRefreshable, ShellPrimaryAction {
+  @override
+  void firePrimaryAction() => _addOrEditAccount();
+
   @override
   void refreshFromShell() => _load();
   List<IncomeSource> activeSources = [];
@@ -182,9 +185,11 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
           insetPadding: TutorialService.instance.dialogInsetsFor(
             TutorialIds.acctDialogFields,
           ),
-          title: Text(
-            isNew ? 'Add Income Source' : 'Edit Income Source',
-            style: const TextStyle(fontSize: 20),
+          title: Center(
+            child: Text(
+              isNew ? 'Add Income Source' : 'Edit Income Source',
+              style: const TextStyle(fontSize: 20),
+            ),
           ),
           content: SizedBox(
             width: 320,
@@ -426,9 +431,8 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
           insetPadding: TutorialService.instance.dialogInsetsFor(
             TutorialIds.incomeDialogIntro,
           ),
-          title: const Text(
-            'Recurring income?',
-            style: TextStyle(fontSize: 20),
+          title: const Center(
+            child: Text('Recurring income?', style: TextStyle(fontSize: 20)),
           ),
           content: SizedBox(
             width: double.maxFinite,
@@ -1448,9 +1452,11 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
             horizontal: 40,
             vertical: 24,
           ),
-          title: Text(
-            '${t.icon} ${t.name}',
-            style: const TextStyle(fontSize: 20),
+          title: Center(
+            child: Text(
+              '${t.icon} ${t.name}',
+              style: const TextStyle(fontSize: 20),
+            ),
           ),
           content: SizedBox(
             width: 240,
@@ -1726,9 +1732,11 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
           final toOptions = activeSources.where((s) => s.id != fromId).toList();
 
           return AlertDialog(
-            title: Text(
-              existing == null ? 'New Transfer' : 'Edit Transfer',
-              style: const TextStyle(fontSize: 20),
+            title: Center(
+              child: Text(
+                existing == null ? 'New Transfer' : 'Edit Transfer',
+                style: const TextStyle(fontSize: 20),
+              ),
             ),
             content: SizedBox(
               width: double.maxFinite,
@@ -2270,6 +2278,8 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 8,
+        leadingWidth: 80,
+        centerTitle: true,
         leading: buildShellBackButton(context),
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -2488,19 +2498,22 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
         ],
       ),
 
-      bottomNavigationBar: TutorialTarget(
-        id: TutorialTargetIds.accountsAddBtn,
-        child: BigActionButton(
-          icon: Icons.account_balance_wallet_outlined,
-          tint: Colors.green,
-          tooltip: 'Add income source · swipe up for menu',
-          onTap: () => _addOrEditAccount(),
-          onSwipeUp: () =>
-              showMainMenuSheet(context, current: MainScreen.accounts),
-          onLongPress: () => MainShell.maybeOf(
-            context,
-          )?.gotoPage(MainScreen.dashboard, animate: false, fade: true),
+      bottomNavigationBar: shellBottomBar(
+        TutorialTarget(
+          id: TutorialTargetIds.accountsAddBtn,
+          child: BigActionButton(
+            icon: Icons.account_balance_wallet_outlined,
+            tint: Colors.green,
+            tooltip: 'Add income source · swipe up for menu',
+            onTap: () => _addOrEditAccount(),
+            onSwipeUp: () =>
+                showMainMenuSheet(context, current: MainScreen.accounts),
+            onLongPress: () => MainShell.maybeOf(
+              context,
+            )?.gotoPage(MainScreen.dashboard, animate: false, fade: true),
+          ),
         ),
+        current: MainScreen.accounts,
       ),
     );
   }

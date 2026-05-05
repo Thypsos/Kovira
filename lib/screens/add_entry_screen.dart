@@ -189,7 +189,7 @@ class _AddEntryScreenState extends State<AddEntryScreen>
   Future<void> _save() async {
     _amount = parseCents(_amountCtrl.text) ?? _amount;
     if (_cat == null) {
-      _snack('Pick a category for this expense.');
+      _snack('Pick a tag for this expense.');
       return;
     }
     if (_status != 'due' && _src == null) {
@@ -248,6 +248,7 @@ class _AddEntryScreenState extends State<AddEntryScreen>
       },
       child: Scaffold(
         appBar: AppBar(
+          centerTitle: true,
           leadingWidth: 96,
           leading: Row(
             mainAxisSize: MainAxisSize.min,
@@ -740,7 +741,7 @@ class _AddEntryScreenState extends State<AddEntryScreen>
           const Padding(
             padding: EdgeInsets.only(top: 4, bottom: 10),
             child: Text(
-              'Which category?',
+              'Which tag?',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
           ),
@@ -1218,7 +1219,9 @@ class _AddEntryScreenState extends State<AddEntryScreen>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, sl) => AlertDialog(
-          title: const Text('New Category', style: TextStyle(fontSize: 20)),
+          title: const Center(
+            child: Text('New tag', style: TextStyle(fontSize: 20)),
+          ),
           content: SizedBox(
             width: double.maxFinite,
             child: SingleChildScrollView(
@@ -1387,12 +1390,12 @@ class _AddEntryScreenState extends State<AddEntryScreen>
     final catName = nameCtrl.text.trim();
     if (catName.isEmpty) {
       if (!mounted) return;
-      _snack('Category name cannot be empty.');
+      _snack('Tag name cannot be empty.');
       return;
     }
     if (_categories.any((c) => c.name.toLowerCase() == catName.toLowerCase())) {
       if (!mounted) return;
-      _snack('A category named "$catName" already exists.');
+      _snack('A tag named "$catName" already exists.');
       return;
     }
     final rawIcon = iconCtrl.text.trim();

@@ -6,6 +6,7 @@ import '../data/database_helper.dart';
 import '../tutorial/tutorial_ids.dart';
 import '../tutorial/tutorial_service.dart';
 import '../tutorial/tutorial_targets.dart';
+import '../utils/money_input.dart';
 import '../widgets/live_icon.dart';
 import '../widgets/main_shell.dart';
 import 'backup_screen.dart';
@@ -38,6 +39,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await SettingsService.instance.setThemeMode(mode);
     themeModeNotifier.value = mode;
     setState(() => _theme = mode);
+  }
+
+  Future<void> _setBottomBarMode(BottomBarMode mode) async {
+    await SettingsService.instance.setBottomBarMode(mode);
+    bottomBarModeNotifier.value = mode;
+    if (mounted) setState(() {});
+  }
+
+  IconData _numberFormatIcon(bool sep, bool smart) {
+    if (sep && smart) return Icons.auto_awesome;
+    if (sep && !smart) return Icons.format_list_numbered;
+    if (!sep && smart) return Icons.short_text;
+    return Icons.pin_outlined;
   }
 
   Future<void> _resetAllData() async {
@@ -228,6 +242,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 8,
+        leadingWidth: 80,
+        centerTitle: true,
         leading: buildModalBackButton(context),
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -253,13 +269,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           _staggered(0, _backupSection(cs)),
           const SizedBox(height: 20),
-          _staggered(80, _appearanceSection(cs)),
+          _staggered(80, _personalizationSection(cs)),
           const SizedBox(height: 20),
-          _staggered(160, _numberSection(cs)),
+          _staggered(160, _helpSection(cs)),
           const SizedBox(height: 20),
-          _staggered(240, _helpSection(cs)),
-          const SizedBox(height: 20),
-          _staggered(320, _aboutSection(cs)),
+          _staggered(240, _aboutSection(cs)),
         ],
       ),
     );
@@ -421,7 +435,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _appearanceSection(ColorScheme cs) {
+  Widget _personalizationSection(ColorScheme cs) {
     IconData themeIcon() {
       switch (_theme) {
         case ThemeMode.light:
@@ -433,10 +447,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     }
 
+    final divider = Divider(
+      height: 1,
+      color: cs.outline.withValues(alpha: 0.5),
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionHeader('Appearance', cs),
+        _sectionHeader('Personalization', cs),
         Card(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -473,6 +492,149 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _themeBtn('Auto', ThemeMode.system, cs),
                   ],
                 ),
+                const SizedBox(height: 18),
+                divider,
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    ValueListenableBuilder<BottomBarMode>(
+                      valueListenable: bottomBarModeNotifier,
+                      builder: (_, mode, _) => AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 320),
+                        switchInCurve: Curves.easeOutCubic,
+                        transitionBuilder: (child, anim) => RotationTransition(
+                          turns: Tween<double>(
+                            begin: 0.75,
+                            end: 1,
+                          ).animate(anim),
+                          child: FadeTransition(opacity: anim, child: child),
+                        ),
+                        child: Icon(
+                          mode == BottomBarMode.tabs
+                              ? Icons.touch_app_outlined
+                              : Icons.view_carousel_outlined,
+                          key: ValueKey(mode),
+                          size: 24,
+                          color: cs.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Text('Navigation', style: TextStyle(fontSize: 17)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ValueListenableBuilder<BottomBarMode>(
+                  valueListenable: bottomBarModeNotifier,
+                  builder: (_, mode, _) => Row(
+                    children: [
+                      _barModeBtn('Tabs', BottomBarMode.tabs, mode, cs),
+                      const SizedBox(width: 8),
+                      _barModeBtn(
+                        'Dedicated',
+                        BottomBarMode.dedicated,
+                        mode,
+                        cs,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                divider,
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 320),
+                      switchInCurve: Curves.easeOutCubic,
+                      transitionBuilder: (child, anim) => RotationTransition(
+                        turns: Tween<double>(begin: 0.75, end: 1).animate(anim),
+                        child: FadeTransition(opacity: anim, child: child),
+                      ),
+                      child: Icon(
+                        _numberFormatIcon(_useThousandSep, _smartDecimals),
+                        key: ValueKey('${_useThousandSep}_$_smartDecimals'),
+                        size: 24,
+                        color: cs.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Text('Number format', style: TextStyle(fontSize: 17)),
+                    const Spacer(),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 240),
+                      switchInCurve: Curves.easeOutCubic,
+                      transitionBuilder: (child, anim) => FadeTransition(
+                        opacity: anim,
+                        child: ScaleTransition(scale: anim, child: child),
+                      ),
+                      child: Builder(
+                        key: ValueKey(
+                          '${_useThousandSep}_${_smartDecimals}_preview',
+                        ),
+                        builder: (bctx) {
+                          final dark =
+                              Theme.of(bctx).brightness == Brightness.dark;
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: dark
+                                  ? Colors.green.withValues(alpha: 0.28)
+                                  : Colors.green.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: dark
+                                    ? Colors.green.withValues(alpha: 0.65)
+                                    : Colors.green.withValues(alpha: 0.45),
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              formatMoney(123450),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: dark
+                                    ? const Color(0xFFA5E8A8)
+                                    : const Color(0xFF1B5E20),
+                                fontFamily: 'monospace',
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text(
+                    'Thousand separator',
+                    style: TextStyle(fontSize: 15),
+                  ),
+                  value: _useThousandSep,
+                  onChanged: (v) async {
+                    await SettingsService.instance.setUseThousandSep(v);
+                    if (mounted) setState(() => _useThousandSep = v);
+                  },
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text(
+                    'Smart decimals',
+                    style: TextStyle(fontSize: 15),
+                  ),
+                  value: _smartDecimals,
+                  onChanged: (v) async {
+                    await SettingsService.instance.setSmartDecimals(v);
+                    if (mounted) setState(() => _smartDecimals = v);
+                  },
+                ),
               ],
             ),
           ),
@@ -481,51 +643,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _numberSection(ColorScheme cs) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _sectionHeader('Number format', cs),
-        Card(
-          child: Column(
-            children: [
-              SwitchListTile(
-                secondary: Icon(
-                  Icons.format_list_numbered,
-                  size: 26,
-                  color: cs.primary,
-                ),
-                title: const Text(
-                  'Thousand separator',
-                  style: TextStyle(fontSize: 17),
-                ),
-                value: _useThousandSep,
-                onChanged: (v) async {
-                  await SettingsService.instance.setUseThousandSep(v);
-                  if (mounted) setState(() => _useThousandSep = v);
-                },
+  Widget _barModeBtn(
+    String label,
+    BottomBarMode mode,
+    BottomBarMode current,
+    ColorScheme cs,
+  ) {
+    final sel = current == mode;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final unselectedBg = isDark
+        ? cs.surfaceContainerHighest
+        : Color.lerp(cs.primary, Colors.white, 0.78)!;
+    final unselectedBorder = isDark
+        ? Colors.transparent
+        : Color.lerp(cs.primary, Colors.white, 0.55)!;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _setBottomBarMode(mode),
+        child: AnimatedScale(
+          duration: const Duration(milliseconds: 160),
+          scale: sel ? 1.04 : 1.0,
+          curve: Curves.easeOut,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: sel ? cs.primary : unselectedBg,
+              borderRadius: BorderRadius.circular(10),
+              border: sel
+                  ? null
+                  : Border.all(color: unselectedBorder, width: 1),
+              boxShadow: sel
+                  ? [
+                      BoxShadow(
+                        color: cs.primary.withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: sel ? cs.onPrimary : cs.onSurface,
               ),
-              Divider(height: 1, indent: 16, endIndent: 16, color: cs.outline),
-              SwitchListTile(
-                secondary: Icon(
-                  Icons.exposure_zero,
-                  size: 26,
-                  color: cs.primary,
-                ),
-                title: const Text(
-                  'Smart decimals',
-                  style: TextStyle(fontSize: 17),
-                ),
-                value: _smartDecimals,
-                onChanged: (v) async {
-                  await SettingsService.instance.setSmartDecimals(v);
-                  if (mounted) setState(() => _smartDecimals = v);
-                },
-              ),
-            ],
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 
@@ -605,12 +775,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   'Personal ledger app',
                   style: TextStyle(fontSize: 13),
                 ),
-                trailing: Text(
-                  'v3.0.1',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: cs.onSurface.withValues(alpha: 0.4),
-                  ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: Colors.orange.withValues(alpha: 0.55),
+                          width: 1,
+                        ),
+                      ),
+                      child: const Text(
+                        'BETA',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFFE65100),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'v3.0.2',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: cs.onSurface.withValues(alpha: 0.4),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

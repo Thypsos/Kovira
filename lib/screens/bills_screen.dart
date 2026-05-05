@@ -59,9 +59,13 @@ class BillsScreen extends StatefulWidget {
   State<BillsScreen> createState() => _BillsScreenState();
 }
 
-class _BillsScreenState extends State<BillsScreen> implements ShellRefreshable {
+class _BillsScreenState extends State<BillsScreen>
+    implements ShellRefreshable, ShellPrimaryAction {
   @override
   void refreshFromShell() => _load();
+
+  @override
+  void firePrimaryAction() => _addOrEditBill();
   List<BillTemplate> bills = [];
   List<Category> categories = [];
   List<IncomeSource> sources = [];
@@ -156,7 +160,9 @@ class _BillsScreenState extends State<BillsScreen> implements ShellRefreshable {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDlg) => AlertDialog(
-          title: const Text('New Category', style: TextStyle(fontSize: 20)),
+          title: const Center(
+            child: Text('New tag', style: TextStyle(fontSize: 20)),
+          ),
           content: SizedBox(
             width: double.maxFinite,
             child: SingleChildScrollView(
@@ -170,7 +176,7 @@ class _BillsScreenState extends State<BillsScreen> implements ShellRefreshable {
                     textCapitalization: TextCapitalization.words,
                     textInputAction: TextInputAction.done,
                     decoration: const InputDecoration(
-                      labelText: 'Category name',
+                      labelText: 'Tag name',
                       hintText: 'e.g. Gym, Fuel, Rent',
                     ),
                   ),
@@ -313,9 +319,7 @@ class _BillsScreenState extends State<BillsScreen> implements ShellRefreshable {
                 final name = nameCtrl.text.trim();
                 if (name.isEmpty) {
                   ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(
-                      content: Text('Category name cannot be empty.'),
-                    ),
+                    const SnackBar(content: Text('Tag name cannot be empty.')),
                   );
                   return;
                 }
@@ -324,7 +328,7 @@ class _BillsScreenState extends State<BillsScreen> implements ShellRefreshable {
                 )) {
                   ScaffoldMessenger.of(ctx).showSnackBar(
                     SnackBar(
-                      content: Text('A category named "$name" already exists.'),
+                      content: Text('A tag named "$name" already exists.'),
                     ),
                   );
                   return;
@@ -405,9 +409,11 @@ class _BillsScreenState extends State<BillsScreen> implements ShellRefreshable {
           insetPadding: TutorialService.instance.dialogInsetsFor(
             TutorialIds.billDialogFields,
           ),
-          title: Text(
-            existing == null ? 'New Bill' : 'Edit Bill',
-            style: const TextStyle(fontSize: 20),
+          title: Center(
+            child: Text(
+              existing == null ? 'New Bill' : 'Edit Bill',
+              style: const TextStyle(fontSize: 20),
+            ),
           ),
           content: SizedBox(
             width: 320,
@@ -626,7 +632,9 @@ class _BillsScreenState extends State<BillsScreen> implements ShellRefreshable {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDlg) => AlertDialog(
-          title: const Text('Choose category', style: TextStyle(fontSize: 20)),
+          title: const Center(
+            child: Text('Choose tag', style: TextStyle(fontSize: 20)),
+          ),
           content: SizedBox(
             width: double.maxFinite,
             child: Column(
@@ -666,7 +674,7 @@ class _BillsScreenState extends State<BillsScreen> implements ShellRefreshable {
                         ),
                         const SizedBox(width: 10),
                         const Text(
-                          'Create new category',
+                          'Create new tag',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
@@ -973,6 +981,8 @@ class _BillsScreenState extends State<BillsScreen> implements ShellRefreshable {
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 8,
+        leadingWidth: 80,
+        centerTitle: true,
         leading: buildShellBackButton(context),
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -989,7 +999,7 @@ class _BillsScreenState extends State<BillsScreen> implements ShellRefreshable {
             const SizedBox(width: 8),
             const Flexible(
               child: Text(
-                'Bills',
+                'Bills & Payments',
                 style: TextStyle(fontSize: 20),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -1145,20 +1155,22 @@ class _BillsScreenState extends State<BillsScreen> implements ShellRefreshable {
                 }),
               ],
             ),
-      bottomNavigationBar: TutorialTarget(
-        id: TutorialTargetIds.billsAddBtn,
-        child: BigActionButton(
-          icon: Icons.receipt_long,
-          tint: Colors.orange,
-          tooltip: 'Add bill · swipe up for menu',
-          onTap: _addOrEditBill,
-          onSwipeUp: () =>
-              showMainMenuSheet(context, current: MainScreen.bills),
-
-          onLongPress: () => MainShell.maybeOf(
-            context,
-          )?.gotoPage(MainScreen.dashboard, animate: false, fade: true),
+      bottomNavigationBar: shellBottomBar(
+        TutorialTarget(
+          id: TutorialTargetIds.billsAddBtn,
+          child: BigActionButton(
+            icon: Icons.receipt_long,
+            tint: Colors.orange,
+            tooltip: 'Add bill · swipe up for menu',
+            onTap: _addOrEditBill,
+            onSwipeUp: () =>
+                showMainMenuSheet(context, current: MainScreen.bills),
+            onLongPress: () => MainShell.maybeOf(
+              context,
+            )?.gotoPage(MainScreen.dashboard, animate: false, fade: true),
+          ),
         ),
+        current: MainScreen.bills,
       ),
     );
   }

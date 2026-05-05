@@ -27,9 +27,24 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> implements ShellRefreshable {
+class _HomeScreenState extends State<HomeScreen>
+    implements ShellRefreshable, ShellPrimaryAction {
   @override
   void refreshFromShell() => _load();
+
+  @override
+  void firePrimaryAction() => _addExpense();
+
+  Future<void> _addExpense() async {
+    if (!await _requireSource('add an expense')) return;
+    if (!mounted) return;
+    final c = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AddEntryScreen()),
+    );
+    if (c == true && mounted) _load();
+  }
+
   List<IncomeSource> sources = [];
   List<Category> categories = [];
   List<LedgerEntry> entries = [];
@@ -216,93 +231,10 @@ class _HomeScreenState extends State<HomeScreen> implements ShellRefreshable {
   }
 
   void _openMenu() {
-    final cs = Theme.of(context).colorScheme;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: cs.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 10),
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: cs.outline.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              _menuTile(
-                icon: Icons.history,
-                label: 'Records & Graph',
-                subtitle: 'Expenses, income, transfers',
-                color: Colors.blue,
-                onTap: () {
-                  MainShell.maybeOf(context)?.gotoPage(MainScreen.records);
-                },
-              ),
-              _menuTile(
-                icon: Icons.pie_chart_outline,
-                label: 'Budget',
-                subtitle: 'Monthly category limits',
-                color: Colors.deepOrange,
-                onTap: () {
-                  MainShell.maybeOf(context)?.gotoPage(MainScreen.budget);
-                },
-              ),
-              _menuTile(
-                icon: Icons.account_balance_wallet_outlined,
-                label: 'Income Sources',
-                subtitle: 'Cash, cards, wallets',
-                color: Colors.green,
-                onTap: () {
-                  MainShell.maybeOf(context)?.gotoPage(MainScreen.accounts);
-                },
-              ),
-              _menuTile(
-                icon: Icons.receipt_long,
-                label: 'Bills & Regular',
-                subtitle: 'Recurring bills and dues',
-                color: Colors.orange,
-                onTap: () async {
-                  if (!await _requireSource('use bills')) return;
-                  if (!mounted) return;
-                  MainShell.maybeOf(context)?.gotoPage(MainScreen.bills);
-                },
-              ),
-              _menuTile(
-                icon: Icons.category_outlined,
-                label: 'Categories',
-                subtitle: 'Organise expense types',
-                color: Colors.purple,
-                onTap: () {
-                  MainShell.maybeOf(context)?.gotoPage(MainScreen.categories);
-                },
-              ),
-              _menuTile(
-                icon: Icons.flag_outlined,
-                label: 'Goals',
-                subtitle: 'Savings targets',
-                color: Colors.teal,
-                onTap: () {
-                  MainShell.maybeOf(context)?.gotoPage(MainScreen.goals);
-                },
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ),
+    showMainMenuSheet(
+      context,
+      current: MainScreen.dashboard,
+      requireSource: _requireSource,
     );
   }
 
@@ -319,66 +251,6 @@ class _HomeScreenState extends State<HomeScreen> implements ShellRefreshable {
       !_budgetExpanded &&
       !_budgetCardDragging;
 
-  Widget _menuTile({
-    required IconData icon,
-    required String label,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: () {
-        Navigator.pop(context);
-        onTap();
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: color, size: 22),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: cs.onSurface.withValues(alpha: 0.55),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right,
-              color: cs.onSurface.withValues(alpha: 0.4),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final expenseEntries = entries.where((e) => e.type == 'expense').toList();
@@ -390,21 +262,30 @@ class _HomeScreenState extends State<HomeScreen> implements ShellRefreshable {
 
     return Scaffold(
       appBar: AppBar(
+        leadingWidth: 80,
+        leading: buildShellBackButton(context),
+        automaticallyImplyLeading: false,
         title: Row(
           mainAxisSize: MainAxisSize.min,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Image.asset('assets/logo.png', width: 26, height: 26),
+          children: const [
+            PulsingGlowIcon(
+              icon: Icons.shopping_bag_outlined,
+              size: 22,
+              color: PageColors.dashboard,
+              glowColor: PageColors.dashboard,
+              maxBlur: 16,
+              minOpacity: 0.35,
+              maxOpacity: 0.85,
+              duration: Duration(milliseconds: 1400),
             ),
-            const SizedBox(width: 8),
-            const Text(
-              'Kovira',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            SizedBox(width: 8),
+            Text(
+              'Expenses',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
             ),
           ],
         ),
-        automaticallyImplyLeading: false,
+        centerTitle: true,
         actions: [
           TutorialTarget(
             id: TutorialTargetIds.dashSettingsGear,
@@ -450,9 +331,12 @@ class _HomeScreenState extends State<HomeScreen> implements ShellRefreshable {
           const SizedBox(height: 8),
         ],
       ),
-      bottomNavigationBar: TutorialTarget(
-        id: TutorialTargetIds.dashExpenseBtn,
-        child: _bottomBar(),
+      bottomNavigationBar: shellBottomBar(
+        TutorialTarget(
+          id: TutorialTargetIds.dashExpenseBtn,
+          child: _bottomBar(),
+        ),
+        current: MainScreen.dashboard,
       ),
     );
   }
@@ -1017,7 +901,7 @@ class _HomeScreenState extends State<HomeScreen> implements ShellRefreshable {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Tap to cap spending per category',
+                      'Tap to cap spending per tag',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -1232,27 +1116,59 @@ class _HomeScreenState extends State<HomeScreen> implements ShellRefreshable {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final fg = isDark ? cs.onPrimaryContainer : onCard;
+    final tint = cs.primary;
     if (sources.isEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              Icon(
+                Icons.account_balance_wallet_outlined,
+                size: 18,
+                color: tint,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Income Sources',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: onCard.withValues(alpha: 0.85),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Spacer(),
           Text(
-            'Income Sources',
+            'No income sources yet',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: fg.withValues(alpha: 0.75),
+              color: onCard,
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            'Tap to add an income source',
-            style: TextStyle(
-              fontSize: 12,
-              color: isDark ? cs.primary : onCard,
-              fontWeight: FontWeight.w600,
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Tap to add an income source',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: tint,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(Icons.arrow_forward, size: 14, color: tint),
+            ],
           ),
+          const Spacer(),
         ],
       );
     }
@@ -1785,22 +1701,12 @@ class _HomeScreenState extends State<HomeScreen> implements ShellRefreshable {
         ? AppColorsDark.expenseFg
         : AppColorsLight.expenseFg;
 
-    Future<void> tapExpense() async {
-      if (!await _requireSource('add an expense')) return;
-      if (!mounted) return;
-      final c = await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const AddEntryScreen()),
-      );
-      if (c == true && mounted) _load();
-    }
-
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: tapExpense,
+          onTap: _addExpense,
           // Upward swipe (anywhere on the bar) opens the menu sheet.
           onVerticalDragEnd: (d) {
             if ((d.primaryVelocity ?? 0) < -150) _openMenu();

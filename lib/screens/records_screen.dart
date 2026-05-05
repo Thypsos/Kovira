@@ -25,9 +25,9 @@ enum GraphMode { categoryBar, categoryDonut, dailyLine, dailyBar }
 String _graphModeLabel(GraphMode m) {
   switch (m) {
     case GraphMode.categoryBar:
-      return 'Bars · by category';
+      return 'Bars · by tag';
     case GraphMode.categoryDonut:
-      return 'Donut · by category';
+      return 'Donut · by tag';
     case GraphMode.dailyLine:
       return 'Trend · daily';
     case GraphMode.dailyBar:
@@ -48,15 +48,21 @@ const _graphPalette = [
 
 class RecordsScreen extends StatefulWidget {
   const RecordsScreen({super.key});
+
+  static final ValueNotifier<bool> showingGraph = ValueNotifier<bool>(false);
+
   @override
   State<RecordsScreen> createState() => _RecordsScreenState();
 }
 
 class _RecordsScreenState extends State<RecordsScreen>
     with SingleTickerProviderStateMixin
-    implements ShellRefreshable {
+    implements ShellRefreshable, ShellPrimaryAction {
   @override
   void refreshFromShell() => _load();
+
+  @override
+  void firePrimaryAction() => _toggleGraph();
 
   static const _sortPrefsKey = 'records_sort_mode';
   static const _filterPrefsKey = 'records_type_filter';
@@ -706,6 +712,7 @@ class _RecordsScreenState extends State<RecordsScreen>
 
   void _toggleGraph() {
     setState(() => _showGraph = !_showGraph);
+    RecordsScreen.showingGraph.value = _showGraph;
     if (_showGraph) {
       _graphAnim.forward();
     } else {
@@ -908,6 +915,8 @@ class _RecordsScreenState extends State<RecordsScreen>
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 8,
+        leadingWidth: 80,
+        centerTitle: true,
         leading: buildShellBackButton(context),
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -931,7 +940,6 @@ class _RecordsScreenState extends State<RecordsScreen>
             ),
           ],
         ),
-        centerTitle: false,
         actions: [
           IconButton(
             icon: const SpinningIcon(
@@ -947,17 +955,19 @@ class _RecordsScreenState extends State<RecordsScreen>
           ),
         ],
       ),
-      bottomNavigationBar: BigActionButton(
-        icon: _showGraph ? Icons.bar_chart : Icons.access_time,
-        tint: Colors.blue,
-        tooltip: _showGraph ? 'Show records' : 'Show chart',
-        onTap: _toggleGraph,
-        onSwipeUp: () =>
-            showMainMenuSheet(context, current: MainScreen.records),
-
-        onLongPress: () => MainShell.maybeOf(
-          context,
-        )?.gotoPage(MainScreen.dashboard, animate: false, fade: true),
+      bottomNavigationBar: shellBottomBar(
+        BigActionButton(
+          icon: _showGraph ? Icons.bar_chart : Icons.access_time,
+          tint: Colors.blue,
+          tooltip: _showGraph ? 'Show records' : 'Show chart',
+          onTap: _toggleGraph,
+          onSwipeUp: () =>
+              showMainMenuSheet(context, current: MainScreen.records),
+          onLongPress: () => MainShell.maybeOf(
+            context,
+          )?.gotoPage(MainScreen.dashboard, animate: false, fade: true),
+        ),
+        current: MainScreen.records,
       ),
       body: Column(
         children: [
@@ -1354,7 +1364,7 @@ class _RecordsScreenState extends State<RecordsScreen>
     if (catSpends.isEmpty) {
       return Center(
         child: Text(
-          'No category data',
+          'No tag data',
           style: TextStyle(color: cs.onSurface.withValues(alpha: 0.5)),
         ),
       );
@@ -1477,7 +1487,7 @@ class _RecordsScreenState extends State<RecordsScreen>
     if (catSpends.isEmpty) {
       return Center(
         child: Text(
-          'No category data',
+          'No tag data',
           style: TextStyle(color: cs.onSurface.withValues(alpha: 0.5)),
         ),
       );

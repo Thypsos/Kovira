@@ -125,15 +125,27 @@ class _BackupScreenState extends State<BackupScreen> {
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 8,
-
-        leading: IconButton(
-          icon: const SpinningIcon(
-            icon: Icons.settings_outlined,
-            size: 24,
-            period: Duration(seconds: 18),
+        leadingWidth: 80,
+        centerTitle: true,
+        leading: InkWell(
+          onTap: () => Navigator.of(context).pop(),
+          borderRadius: BorderRadius.circular(20),
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.arrow_back, size: 20, color: Colors.white),
+                SizedBox(width: 2),
+                SpinningIcon(
+                  icon: Icons.settings_outlined,
+                  size: 18,
+                  color: Colors.white,
+                  period: Duration(seconds: 18),
+                ),
+              ],
+            ),
           ),
-          tooltip: 'Back to Settings',
-          onPressed: () => Navigator.of(context).pop(),
         ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -435,10 +447,7 @@ class _BackupScreenState extends State<BackupScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: chipBg,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: chipBg, shape: BoxShape.circle),
               child: loading
                   ? SizedBox(
                       width: 22,

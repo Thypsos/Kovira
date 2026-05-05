@@ -90,9 +90,13 @@ class GoalsScreen extends StatefulWidget {
   State<GoalsScreen> createState() => _GoalsScreenState();
 }
 
-class _GoalsScreenState extends State<GoalsScreen> implements ShellRefreshable {
+class _GoalsScreenState extends State<GoalsScreen>
+    implements ShellRefreshable, ShellPrimaryAction {
   @override
   void refreshFromShell() => _load();
+
+  @override
+  void firePrimaryAction() => _addOrEditGoal();
 
   List<Goal> _goals = [];
 
@@ -159,7 +163,9 @@ class _GoalsScreenState extends State<GoalsScreen> implements ShellRefreshable {
             insetPadding: TutorialService.instance.dialogInsetsFor(
               TutorialIds.goalDialogFields,
             ),
-            title: Text(existing == null ? 'New goal' : 'Edit goal'),
+            title: Center(
+              child: Text(existing == null ? 'New goal' : 'Edit goal'),
+            ),
             content: SizedBox(
               width: 320,
               child: TutorialFireOnMount(
@@ -675,6 +681,8 @@ class _GoalsScreenState extends State<GoalsScreen> implements ShellRefreshable {
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 8,
+        leadingWidth: 80,
+        centerTitle: true,
         leading: buildShellBackButton(context),
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -751,19 +759,22 @@ class _GoalsScreenState extends State<GoalsScreen> implements ShellRefreshable {
                     : card;
               }).toList(),
             ),
-      bottomNavigationBar: TutorialTarget(
-        id: TutorialTargetIds.goalsAddBtn,
-        child: BigActionButton(
-          icon: Icons.flag_outlined,
-          tint: Colors.teal,
-          tooltip: 'Add goal · swipe up for menu',
-          onTap: _addOrEditGoal,
-          onSwipeUp: () =>
-              showMainMenuSheet(context, current: MainScreen.goals),
-          onLongPress: () => MainShell.maybeOf(
-            context,
-          )?.gotoPage(MainScreen.dashboard, animate: false, fade: true),
+      bottomNavigationBar: shellBottomBar(
+        TutorialTarget(
+          id: TutorialTargetIds.goalsAddBtn,
+          child: BigActionButton(
+            icon: Icons.flag_outlined,
+            tint: Colors.teal,
+            tooltip: 'Add goal · swipe up for menu',
+            onTap: _addOrEditGoal,
+            onSwipeUp: () =>
+                showMainMenuSheet(context, current: MainScreen.goals),
+            onLongPress: () => MainShell.maybeOf(
+              context,
+            )?.gotoPage(MainScreen.dashboard, animate: false, fade: true),
+          ),
         ),
+        current: MainScreen.goals,
       ),
     );
   }
