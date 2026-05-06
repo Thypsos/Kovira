@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
+import '../tutorial/learn_button.dart';
 import '../models/bill_template.dart';
 import '../models/category.dart';
 import '../models/income_source.dart';
@@ -66,6 +67,10 @@ class _BillsScreenState extends State<BillsScreen>
 
   @override
   void firePrimaryAction() => _addOrEditBill();
+
+  @override
+  bool get hasData => bills.isNotEmpty;
+
   List<BillTemplate> bills = [];
   List<Category> categories = [];
   List<IncomeSource> sources = [];
@@ -419,6 +424,7 @@ class _BillsScreenState extends State<BillsScreen>
             width: 320,
             child: TutorialFireOnMount(
               messageId: TutorialIds.billDialogFields,
+              pendingDialogKey: 'bill',
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -979,6 +985,7 @@ class _BillsScreenState extends State<BillsScreen>
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         titleSpacing: 8,
         leadingWidth: 80,
@@ -1007,6 +1014,7 @@ class _BillsScreenState extends State<BillsScreen>
           ],
         ),
         actions: [
+          const LearnButton(page: MainScreen.bills),
           IconButton(
             icon: const SpinningIcon(
               icon: Icons.settings_outlined,

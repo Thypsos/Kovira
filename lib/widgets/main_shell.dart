@@ -12,7 +12,9 @@ import '../screens/goals_screen.dart';
 import '../app.dart';
 import '../data/settings_service.dart';
 import '../tutorial/tutorial_ids.dart';
+import '../tutorial/tutorial_nav_observer.dart';
 import '../tutorial/tutorial_service.dart';
+import '../tutorial/tutorial_targets.dart';
 import 'live_icon.dart';
 import 'main_menu_sheet.dart';
 import 'main_tab_bar.dart';
@@ -23,6 +25,7 @@ abstract class ShellRefreshable {
 
 abstract class ShellPrimaryAction {
   void firePrimaryAction();
+  bool get hasData => false;
 }
 
 Widget shellBottomBar(Widget dedicated, {required MainScreen current}) {
@@ -30,7 +33,10 @@ Widget shellBottomBar(Widget dedicated, {required MainScreen current}) {
     valueListenable: bottomBarModeNotifier,
     builder: (_, mode, _) {
       if (mode != BottomBarMode.dedicated) return const SizedBox.shrink();
-      return dedicated;
+      return TutorialTarget(
+        id: TutorialTargetIds.dedActionButton,
+        child: dedicated,
+      );
     },
   );
 }
@@ -87,27 +93,30 @@ Widget? buildShellBackButton(BuildContext context) {
   final target = shell?.backTarget;
   if (shell == null || target == null) return null;
   final chrome = MainScreenChrome.of(target);
-  return InkWell(
-    onTap: shell.back,
-    borderRadius: BorderRadius.circular(20),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.arrow_back, size: 20, color: chrome.color),
-          const SizedBox(width: 4),
-          PulsingGlowIcon(
-            icon: chrome.icon,
-            size: 20,
-            color: chrome.color,
-            glowColor: chrome.color,
-            maxBlur: 14,
-            minOpacity: 0.30,
-            maxOpacity: 0.75,
-            duration: const Duration(milliseconds: 1400),
-          ),
-        ],
+  return TutorialTarget(
+    id: TutorialTargetIds.shellBackArrow,
+    child: InkWell(
+      onTap: shell.back,
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.arrow_back, size: 20, color: chrome.color),
+            const SizedBox(width: 4),
+            PulsingGlowIcon(
+              icon: chrome.icon,
+              size: 20,
+              color: chrome.color,
+              glowColor: chrome.color,
+              maxBlur: 14,
+              minOpacity: 0.30,
+              maxOpacity: 0.75,
+              duration: const Duration(milliseconds: 1400),
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -279,6 +288,7 @@ class MainShellState extends State<MainShell>
     setState(() => _current = next);
     _armPageSwipeGuard();
     MainShell.currentScreen = next;
+    TutorialNavObserver.instance.notifyDismiss();
 
     _maybeFireTutorialFor(next);
 
@@ -350,7 +360,7 @@ class MainShellState extends State<MainShell>
   bool _tutorialActive = false;
 
   bool get _shellSwipeLocked =>
-      _dashboardSwipeLocked || _pageSwipeGuardLocked || _tutorialActive;
+      _dashboardSwipeLocked || _pageSwipeGuardLocked;
 
   @override
   void initState() {
@@ -382,34 +392,38 @@ class MainShellState extends State<MainShell>
 
   MainScreen get currentPage => _current;
 
-  void fireCurrentPagePrimaryAction() {
-    final State? s;
-    switch (_current) {
+  State? _stateForPage(MainScreen p) {
+    switch (p) {
       case MainScreen.records:
-        s = _recordsKey.currentState;
-        break;
+        return _recordsKey.currentState;
       case MainScreen.budget:
-        s = _budgetKey.currentState;
-        break;
+        return _budgetKey.currentState;
       case MainScreen.accounts:
-        s = _accountsKey.currentState;
-        break;
+        return _accountsKey.currentState;
       case MainScreen.dashboard:
-        s = _dashboardKey.currentState;
-        break;
+        return _dashboardKey.currentState;
       case MainScreen.bills:
-        s = _billsKey.currentState;
-        break;
+        return _billsKey.currentState;
       case MainScreen.categories:
-        s = _categoriesKey.currentState;
-        break;
+        return _categoriesKey.currentState;
       case MainScreen.goals:
-        s = _goalsKey.currentState;
-        break;
+        return _goalsKey.currentState;
     }
+  }
+
+  void fireCurrentPagePrimaryAction() {
+    final s = _stateForPage(_current);
     if (s is ShellPrimaryAction) {
       (s as ShellPrimaryAction).firePrimaryAction();
     }
+  }
+
+  bool pageHasData(MainScreen p) {
+    final s = _stateForPage(p);
+    if (s is ShellPrimaryAction) {
+      return (s as ShellPrimaryAction).hasData;
+    }
+    return false;
   }
 
   void _onTutorialActiveChanged() {
@@ -566,24 +580,25 @@ class MainShellState extends State<MainShell>
         builder: (_, mode, _) {
           final scaffold = Scaffold(
             backgroundColor: Colors.transparent,
+            resizeToAvoidBottomInset: false,
             body: body,
             bottomNavigationBar: mode == BottomBarMode.tabs
                 ? MainTabBar(current: _current)
                 : null,
           );
-          if (mode != BottomBarMode.dedicated) return scaffold;
           final safeBottom = MediaQuery.paddingOf(context).bottom;
           return Stack(
             children: [
               scaffold,
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: safeBottom + 88,
-                child: IgnorePointer(
-                  child: _ShellPageBubbles(current: _current),
+              if (mode == BottomBarMode.dedicated)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: safeBottom + 88,
+                  child: IgnorePointer(
+                    child: _ShellPageBubbles(current: _current),
+                  ),
                 ),
-              ),
             ],
           );
         },

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
+import '../tutorial/learn_button.dart';
 import '../models/category.dart';
 import '../utils/currency_symbol.dart';
 import '../utils/emoji_suggestions.dart';
@@ -96,6 +97,10 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
 
   @override
   void firePrimaryAction() => _addCategory();
+
+  @override
+  bool get hasData => categories.length > 2;
+
   List<Category> categories = [];
   @override
   void initState() {
@@ -128,6 +133,7 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
             width: 320,
             child: TutorialFireOnMount(
               messageId: TutorialIds.catDialogFields,
+              pendingDialogKey: 'tag',
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -700,6 +706,7 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         titleSpacing: 8,
         leadingWidth: 80,
@@ -728,6 +735,7 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
           ],
         ),
         actions: [
+          const LearnButton(page: MainScreen.categories),
           IconButton(
             icon: const SpinningIcon(
               icon: Icons.settings_outlined,

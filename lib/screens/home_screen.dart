@@ -17,7 +17,9 @@ import '../widgets/live_icon.dart';
 import '../widgets/auto_scroll.dart';
 import '../widgets/main_menu_sheet.dart';
 import '../widgets/main_shell.dart';
+import '../tutorial/learn_button.dart';
 import '../tutorial/tutorial_ids.dart';
+import '../tutorial/tutorial_nav_observer.dart';
 import '../tutorial/tutorial_service.dart';
 import '../tutorial/tutorial_targets.dart';
 
@@ -34,6 +36,9 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void firePrimaryAction() => _addExpense();
+
+  @override
+  bool get hasData => entries.isNotEmpty;
 
   Future<void> _addExpense() async {
     if (!await _requireSource('add an expense')) return;
@@ -261,6 +266,7 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         leadingWidth: 80,
         leading: buildShellBackButton(context),
@@ -287,6 +293,7 @@ class _HomeScreenState extends State<HomeScreen>
         ),
         centerTitle: true,
         actions: [
+          const LearnButton(page: MainScreen.dashboard),
           TutorialTarget(
             id: TutorialTargetIds.dashSettingsGear,
             child: IconButton(
@@ -391,6 +398,7 @@ class _HomeScreenState extends State<HomeScreen>
             _lastCardDir = dir;
             _topPageIndex = next;
           });
+          TutorialNavObserver.instance.notifyDismiss();
         },
         onHorizontalDragCancel: () {
           if (_topCardDx != 0) {
@@ -525,6 +533,7 @@ class _HomeScreenState extends State<HomeScreen>
                                 _lastCardDir = dir;
                                 _topPageIndex = next;
                               });
+                              TutorialNavObserver.instance.notifyDismiss();
                             };
                             instance.onCancel = () {
                               if (_topCardDx != 0) {

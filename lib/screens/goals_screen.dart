@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
+import '../tutorial/learn_button.dart';
 import '../models/goal.dart';
 import '../models/income_source.dart';
 import '../theme/app_colors.dart';
@@ -98,6 +99,9 @@ class _GoalsScreenState extends State<GoalsScreen>
   @override
   void firePrimaryAction() => _addOrEditGoal();
 
+  @override
+  bool get hasData => _goals.isNotEmpty;
+
   List<Goal> _goals = [];
 
   List<IncomeSource> _sources = [];
@@ -170,6 +174,7 @@ class _GoalsScreenState extends State<GoalsScreen>
               width: 320,
               child: TutorialFireOnMount(
                 messageId: TutorialIds.goalDialogFields,
+                pendingDialogKey: 'goal',
                 child: SingleChildScrollView(
                   controller: scrollCtrl,
                   child: Column(
@@ -679,6 +684,7 @@ class _GoalsScreenState extends State<GoalsScreen>
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         titleSpacing: 8,
         leadingWidth: 80,
@@ -707,6 +713,7 @@ class _GoalsScreenState extends State<GoalsScreen>
           ],
         ),
         actions: [
+          const LearnButton(page: MainScreen.goals),
           IconButton(
             icon: const SpinningIcon(
               icon: Icons.settings_outlined,

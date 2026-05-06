@@ -8,9 +8,11 @@ import '../widgets/category_icon.dart';
 import '../utils/emoji_suggestions.dart';
 import '../utils/currency_symbol.dart';
 import '../utils/money_input.dart';
+import '../tutorial/learn_service.dart';
 import '../tutorial/tutorial_ids.dart';
 import '../tutorial/tutorial_service.dart';
 import '../tutorial/tutorial_targets.dart';
+import '../widgets/live_icon.dart';
 
 class AddEntryScreen extends StatefulWidget {
   final LedgerEntry? existing;
@@ -53,9 +55,68 @@ class _AddEntryScreenState extends State<AddEntryScreen>
     if (widget.existing == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        TutorialService.instance.show(context, TutorialIds.entryPaidDueToggle);
+        if (LearnService.instance.consumePendingDialog('expense')) {
+          _runDialogTutorial();
+        }
       });
     }
+  }
+
+  bool _dialogTutorialInFlight = false;
+
+  Future<void> _runDialogTutorial() async {
+    if (_dialogTutorialInFlight) return;
+    _dialogTutorialInFlight = true;
+    try {
+      await _runDialogTutorialChain();
+    } finally {
+      _dialogTutorialInFlight = false;
+    }
+  }
+
+  Future<void> _runDialogTutorialChain() async {
+    final svc = TutorialService.instance;
+    await svc.show(
+      context,
+      TutorialIds.learnExpenseDialogIntro,
+      force: true,
+      forced: false,
+    );
+    if (!mounted) return;
+    await svc.show(
+      context,
+      TutorialIds.learnExpenseDialogPaidDue,
+      force: true,
+      forced: false,
+    );
+    if (!mounted) return;
+    await svc.show(
+      context,
+      TutorialIds.learnExpenseDialogSource,
+      force: true,
+      forced: false,
+    );
+    if (!mounted) return;
+    await svc.show(
+      context,
+      TutorialIds.learnExpenseDialogTag,
+      force: true,
+      forced: false,
+    );
+    if (!mounted) return;
+    await svc.show(
+      context,
+      TutorialIds.learnExpenseDialogAmount,
+      force: true,
+      forced: false,
+    );
+    if (!mounted) return;
+    await svc.show(
+      context,
+      TutorialIds.learnExpenseDialogName,
+      force: true,
+      forced: false,
+    );
   }
 
   @override
@@ -274,6 +335,22 @@ class _AddEntryScreenState extends State<AddEntryScreen>
             widget.existing == null ? 'Add Expense' : 'Edit Expense',
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           ),
+          actions: [
+            IconButton(
+              tooltip: 'Tap to learn this dialog',
+              onPressed: _runDialogTutorial,
+              icon: const PulsingGlowIcon(
+                icon: Icons.school_outlined,
+                size: 24,
+                color: Color(0xFFFFA000),
+                glowColor: Color(0xFFFFA000),
+                maxBlur: 14,
+                minOpacity: 0.30,
+                maxOpacity: 0.75,
+                duration: Duration(milliseconds: 1300),
+              ),
+            ),
+          ],
         ),
         body: SafeArea(
           child: Column(
@@ -660,6 +737,7 @@ class _AddEntryScreenState extends State<AddEntryScreen>
             child: Text(
               'Which income source?',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
             ),
           ),
           if (_sources.isEmpty)
@@ -743,6 +821,7 @@ class _AddEntryScreenState extends State<AddEntryScreen>
             child: Text(
               'Which tag?',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
             ),
           ),
           GridView.count(
@@ -842,6 +921,7 @@ class _AddEntryScreenState extends State<AddEntryScreen>
           child: Text(
             'What was it for?',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            textAlign: TextAlign.center,
           ),
         ),
 
@@ -929,6 +1009,7 @@ class _AddEntryScreenState extends State<AddEntryScreen>
           child: Text(
             'How much?',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            textAlign: TextAlign.center,
           ),
         ),
         TutorialTarget(

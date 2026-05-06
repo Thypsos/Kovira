@@ -42,6 +42,90 @@ class TutorialIds {
   static const recordsGraphMode = 'records_graph_mode';
 
   static const settingsBackup = 'settings_backup';
+
+  static const learnDashTabsIntro = 'learn_dash_tabs_intro';
+  static const learnDashTabsAdd = 'learn_dash_tabs_add';
+  static const learnDashTabsTopCard = 'learn_dash_tabs_top_card';
+  static const learnDashTabsExpenses = 'learn_dash_tabs_expenses';
+
+  static const learnDashDedIntro = 'learn_dash_ded_intro';
+  static const learnDashDedAdd = 'learn_dash_ded_add';
+  static const learnDashDedNav = 'learn_dash_ded_nav';
+  static const learnDashDedTopCard = 'learn_dash_ded_top_card';
+
+  static const learnRecordsTabsIntro = 'learn_records_tabs_intro';
+  static const learnRecordsTabsToggle = 'learn_records_tabs_toggle';
+  static const learnRecordsTabsSwipe = 'learn_records_tabs_swipe';
+
+  static const learnRecordsDedIntro = 'learn_records_ded_intro';
+  static const learnRecordsDedToggle = 'learn_records_ded_toggle';
+  static const learnRecordsDedSwipe = 'learn_records_ded_swipe';
+
+  static const learnBudgetTabsIntro = 'learn_budget_tabs_intro';
+  static const learnBudgetTabsAdd = 'learn_budget_tabs_add';
+  static const learnBudgetDedIntro = 'learn_budget_ded_intro';
+  static const learnBudgetDedAdd = 'learn_budget_ded_add';
+
+  static const learnSourcesTabsIntro = 'learn_sources_tabs_intro';
+  static const learnSourcesTabsAdd = 'learn_sources_tabs_add';
+  static const learnSourcesDedIntro = 'learn_sources_ded_intro';
+  static const learnSourcesDedAdd = 'learn_sources_ded_add';
+
+  static const learnBillsTabsIntro = 'learn_bills_tabs_intro';
+  static const learnBillsTabsAdd = 'learn_bills_tabs_add';
+  static const learnBillsDedIntro = 'learn_bills_ded_intro';
+  static const learnBillsDedAdd = 'learn_bills_ded_add';
+
+  static const learnTagsTabsIntro = 'learn_tags_tabs_intro';
+  static const learnTagsTabsAdd = 'learn_tags_tabs_add';
+  static const learnTagsDedIntro = 'learn_tags_ded_intro';
+  static const learnTagsDedAdd = 'learn_tags_ded_add';
+
+  static const learnGoalsTabsIntro = 'learn_goals_tabs_intro';
+  static const learnGoalsTabsAdd = 'learn_goals_tabs_add';
+  static const learnGoalsDedIntro = 'learn_goals_ded_intro';
+  static const learnGoalsDedAdd = 'learn_goals_ded_add';
+
+  static const learnRecordsDedLongPress = 'learn_records_ded_longpress';
+  static const learnBudgetDedLongPress = 'learn_budget_ded_longpress';
+  static const learnSourcesDedLongPress = 'learn_sources_ded_longpress';
+  static const learnBillsDedLongPress = 'learn_bills_ded_longpress';
+  static const learnTagsDedLongPress = 'learn_tags_ded_longpress';
+  static const learnGoalsDedLongPress = 'learn_goals_ded_longpress';
+  static const learnRecordsTabsSwipeMonth = 'learn_records_tabs_swipe_month';
+  static const learnRecordsDedSwipeMonth = 'learn_records_ded_swipe_month';
+  static const learnDashTabsSwipeTop = 'learn_dash_tabs_swipe_top';
+  static const learnDashDedSwipeTop = 'learn_dash_ded_swipe_top';
+
+  static const learnDialogExpense = 'learn_dialog_expense';
+  static const learnDialogTag = 'learn_dialog_tag';
+  static const learnDialogBill = 'learn_dialog_bill';
+  static const learnDialogGoal = 'learn_dialog_goal';
+  static const learnDialogBudget = 'learn_dialog_budget';
+  static const learnDialogSource = 'learn_dialog_source';
+
+  static const learnGlobalTopCardForward = 'learn_global_topcard_forward';
+  static const learnGlobalTopCardBack = 'learn_global_topcard_back';
+  static const learnGlobalLongPress = 'learn_global_longpress';
+  static const learnGlobalSwipePage = 'learn_global_swipe_page';
+  static const learnGlobalBackArrow = 'learn_global_back_arrow';
+
+  static const learnDataDashTap = 'learn_data_dash_tap';
+  static const learnDataRecordsTap = 'learn_data_records_tap';
+  static const learnDataAccountsTap = 'learn_data_accounts_tap';
+  static const learnDataBillsTap = 'learn_data_bills_tap';
+  static const learnDataCatsTap = 'learn_data_cats_tap';
+  static const learnDataGoalsTap = 'learn_data_goals_tap';
+  static const learnDataBudgetTap = 'learn_data_budget_tap';
+
+  static const learnExpenseDialogIntro = 'learn_expense_dialog_intro';
+  static const learnExpenseDialogPaidDue = 'learn_expense_dialog_paid_due';
+  static const learnExpenseDialogSource = 'learn_expense_dialog_source';
+  static const learnExpenseDialogTag = 'learn_expense_dialog_tag';
+  static const learnExpenseDialogAmount = 'learn_expense_dialog_amount';
+  static const learnExpenseDialogName = 'learn_expense_dialog_name';
+
+  static const learnNoAccountsBlock = 'learn_no_accounts_block';
 }
 
 class TutorialTargetIds {
@@ -77,4 +161,8 @@ class TutorialTargetIds {
   static const catsFirstCard = 'cats_first_card';
   static const goalsFirstCard = 'goals_first_card';
   static const budgetFirstCard = 'budget_first_card';
+
+  static const dedActionButton = 'ded_action_button';
+  static const tabActiveAdd = 'tab_active_add';
+  static const shellBackArrow = 'shell_back_arrow';
 }

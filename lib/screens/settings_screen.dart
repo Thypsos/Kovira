@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../app.dart';
 import '../data/settings_service.dart';
 import '../data/database_helper.dart';
+import '../tutorial/learn_service.dart';
 import '../tutorial/tutorial_ids.dart';
 import '../tutorial/tutorial_service.dart';
 import '../tutorial/tutorial_targets.dart';
@@ -195,6 +196,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _replayTutorial() async {
+    await LearnService.instance.resetAll();
     await TutorialService.instance.resetAll();
     if (!mounted) return;
     final cs = Theme.of(context).colorScheme;
@@ -220,7 +222,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const Icon(Icons.refresh, size: 16, color: orange),
                 const SizedBox(width: 8),
                 const Text(
-                  'Tutorial reset',
+                  'Learn progress reset',
                   style: TextStyle(
                     color: orange,
                     fontSize: 13,
@@ -716,11 +718,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               maxOpacity: 0.50,
             ),
             title: const Text(
-              'Replay tutorial',
+              'Reset learn progress',
               style: TextStyle(fontSize: 17),
             ),
             subtitle: const Text(
-              'Show the assisted tips again from the start',
+              'Bring the Learn icon back on every page',
               style: TextStyle(fontSize: 13),
             ),
             trailing: const Icon(Icons.refresh),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'data/settings_service.dart';
 import 'screens/welcome_screen.dart';
+import 'tutorial/tutorial_nav_observer.dart';
 import 'widgets/main_shell.dart';
 import 'theme/app_colors.dart';
 
@@ -51,6 +52,7 @@ class _KoviraAppState extends State<KoviraApp> {
         themeMode: mode,
         theme: _lightTheme(),
         darkTheme: _darkTheme(),
+        navigatorObservers: [TutorialNavObserver.instance],
         home: !_loaded
             ? const Scaffold(body: SizedBox.shrink())
             : !_welcomeSeen

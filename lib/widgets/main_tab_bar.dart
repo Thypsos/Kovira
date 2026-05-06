@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../screens/records_screen.dart';
+import '../tutorial/tutorial_ids.dart';
+import '../tutorial/tutorial_targets.dart';
 import 'main_menu_sheet.dart';
 import 'main_shell.dart';
 
@@ -88,6 +90,7 @@ class MainTabBar extends StatelessWidget {
                       label: _shortLabel(s),
                       isDark: isDark,
                       customTap: onTabTap == null ? null : () => onTabTap!(s),
+                      showFloatingButton: !transparentBg,
                     ),
                   ),
                 )
@@ -107,6 +110,7 @@ class _Tab extends StatelessWidget {
   final String label;
   final bool isDark;
   final VoidCallback? customTap;
+  final bool showFloatingButton;
 
   const _Tab({
     required this.page,
@@ -116,6 +120,7 @@ class _Tab extends StatelessWidget {
     required this.label,
     required this.isDark,
     this.customTap,
+    this.showFloatingButton = true,
   });
 
   void _onTap(BuildContext context) {
@@ -160,15 +165,18 @@ class _Tab extends StatelessWidget {
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  if (!active)
+                  if (!active || !showFloatingButton)
                     Center(child: Icon(idleIcon, size: 22, color: iconColor))
                   else
                     Positioned(
                       top: -22,
-                      child: _ActiveFloatingButton(
-                        page: page,
-                        color: color,
-                        iconBuilder: _activeActionIcon,
+                      child: TutorialTarget(
+                        id: TutorialTargetIds.tabActiveAdd,
+                        child: _ActiveFloatingButton(
+                          page: page,
+                          color: color,
+                          iconBuilder: _activeActionIcon,
+                        ),
                       ),
                     ),
                 ],

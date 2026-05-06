@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'learn_service.dart';
 import 'tutorial_messages.dart';
+import 'tutorial_nav_observer.dart';
 import 'tutorial_overlay.dart';
 import 'tutorial_targets.dart';
 
@@ -15,8 +17,6 @@ class TutorialService {
   SharedPreferences? _prefs;
   bool _skipAll = false;
   final Set<String> _seen = {};
-
-  int _fireToken = 0;
 
   int _activeCount = 0;
   final ValueNotifier<bool> isActive = ValueNotifier<bool>(false);
@@ -53,11 +53,17 @@ class TutorialService {
 
   bool hasSeen(String id) => _seen.contains(id);
 
+  Future<bool> waitForDepth(int target, {int maxSpins = 6000}) async {
+    var spins = 0;
+    while (TutorialNavObserver.instance.depth > target && spins < maxSpins) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      spins++;
+    }
+    return TutorialNavObserver.instance.depth <= target;
+  }
+
   EdgeInsets dialogInsetsFor(String messageId) {
-    final seen = hasSeen(messageId) || _skipAll;
-    return seen
-        ? const EdgeInsets.symmetric(horizontal: 40, vertical: 24)
-        : const EdgeInsets.fromLTRB(24, 24, 24, 210);
+    return const EdgeInsets.symmetric(horizontal: 40, vertical: 24);
   }
 
   Future<void> markSeen(String id) async {
@@ -80,64 +86,76 @@ class TutorialService {
     _skipAll = false;
   }
 
-  Future<void> show(BuildContext context, String id) async {
+  Future<void> show(
+    BuildContext context,
+    String id, {
+    bool force = false,
+    bool forced = true,
+  }) async {
+    if (!force) return;
     if (_skipAll || _seen.contains(id)) return;
     final msg = TutorialMessages.get(id);
     if (msg == null) return;
     if (!context.mounted) return;
 
-    final myToken = ++_fireToken;
     _enterActive();
     try {
       await WidgetsBinding.instance.endOfFrame;
       FocusManager.instance.primaryFocus?.unfocus();
 
-      await Future<void>.delayed(const Duration(milliseconds: 900));
-      if (myToken != _fireToken) return;
-      if (_skipAll || _seen.contains(id)) return;
+      await Future<void>.delayed(const Duration(milliseconds: 500));
       if (!context.mounted) return;
 
-      await Navigator.of(
-        context,
-        rootNavigator: true,
-      ).push(TutorialOverlay.route(message: msg));
-
-      if (myToken == _fireToken) await markSeen(id);
+      await TutorialOverlay.show(context, message: msg, forced: forced);
+      await markSeen(id);
     } finally {
       _exitActive();
     }
   }
 
-  Future<void> showChain(BuildContext context, List<String> ids) async {
-    final pending = ids.where((id) => !_seen.contains(id)).toList();
-    if (_skipAll || pending.isEmpty) return;
+  Future<void> showChain(
+    BuildContext context,
+    List<String> ids, {
+    bool force = false,
+    bool forced = true,
+    bool waitDepthBetween = true,
+  }) async {
+    if (!force) return;
+    final pending = ids.toList();
+    if (pending.isEmpty) return;
+    final baseDepth = TutorialNavObserver.instance.depth;
     for (var i = 0; i < pending.length; i++) {
       final id = pending[i];
       if (!context.mounted) return;
-      if (_skipAll || _seen.contains(id)) continue;
       final msg = TutorialMessages.get(id);
       if (msg == null) continue;
 
-      final myToken = ++_fireToken;
+      if (i > 0 && waitDepthBetween) {
+        var spins = 0;
+        while (TutorialNavObserver.instance.depth > baseDepth && spins < 600) {
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+          spins++;
+          if (!context.mounted) return;
+        }
+        if (TutorialNavObserver.instance.depth > baseDepth) return;
+      }
+
       _enterActive();
       try {
         await WidgetsBinding.instance.endOfFrame;
         if (i == 0) {
           FocusManager.instance.primaryFocus?.unfocus();
         }
-        await Future<void>.delayed(Duration(milliseconds: i == 0 ? 900 : 160));
-        if (myToken != _fireToken) return;
-        if (_skipAll || _seen.contains(id)) continue;
+        await Future<void>.delayed(Duration(milliseconds: i == 0 ? 500 : 280));
         if (!context.mounted) return;
 
-        await Navigator.of(context, rootNavigator: true).push(
-          TutorialOverlay.route(
-            message: msg,
-            stepIndex: i + 1,
-            stepCount: pending.length,
-          ),
+        await TutorialOverlay.show(
+          context,
+          message: msg,
+          stepIndex: i + 1,
+          stepCount: pending.length,
+          forced: forced,
         );
-        if (myToken != _fireToken) return;
         await markSeen(id);
       } finally {
         _exitActive();
@@ -189,12 +207,14 @@ class _TutorialAutoFireState extends State<TutorialAutoFire> {
 
 class TutorialFireOnMount extends StatefulWidget {
   final String messageId;
+  final String? pendingDialogKey;
   final Widget child;
 
   const TutorialFireOnMount({
     super.key,
     required this.messageId,
     required this.child,
+    this.pendingDialogKey,
   });
 
   @override
@@ -207,7 +227,18 @@ class _TutorialFireOnMountState extends State<TutorialFireOnMount> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      TutorialService.instance.show(context, widget.messageId);
+      final key = widget.pendingDialogKey;
+      if (key != null) {
+        if (!LearnService.instance.consumePendingDialog(key)) return;
+        TutorialService.instance.show(
+          context,
+          widget.messageId,
+          force: true,
+          forced: false,
+        );
+      } else {
+        TutorialService.instance.show(context, widget.messageId);
+      }
     });
   }
 

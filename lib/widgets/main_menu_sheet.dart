@@ -87,27 +87,32 @@ Future<void> showMainMenuSheet(
         begin: const Offset(0, 1.0),
         end: Offset.zero,
       ).animate(curved);
-      final panel = GestureDetector(
-        onTap: () {},
+      final panel = Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: (_) {},
         child: Container(
           decoration: BoxDecoration(
-            color: cs.surface.withValues(alpha: 0.78),
+            color: cs.surface,
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
               color: cs.outline.withValues(alpha: 0.35),
               width: 1,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.18),
+                blurRadius: 16,
+                spreadRadius: 1,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: MainTabBar(
             current: current,
             transparentBg: true,
-            onTabTap: (target) async {
+            onTabTap: (target) {
               Navigator.pop(sheetCtx);
-              if (target == MainScreen.bills && requireSource != null) {
-                final ok = await requireSource('use bills');
-                if (!ok) return;
-              }
               if (!context.mounted) return;
               MainShell.maybeOf(context)?.gotoPage(target);
               onReturn?.call();

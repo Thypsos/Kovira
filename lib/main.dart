@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'app.dart';
 import 'data/notification_service.dart';
 import 'data/settings_service.dart';
+import 'tutorial/learn_service.dart';
 import 'tutorial/tutorial_service.dart';
 
 void main() async {
@@ -11,5 +12,6 @@ void main() async {
   await NotificationService.instance.init();
 
   await TutorialService.instance.init();
+  await LearnService.instance.init();
   runApp(const KoviraApp());
 }

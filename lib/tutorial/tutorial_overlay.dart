@@ -1,61 +1,88 @@
+import 'dart:async';
+
+// ignore: unnecessary_import
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/main_menu_sheet.dart';
 import '../widgets/main_shell.dart';
+import 'gesture_indicator.dart';
 import 'tutorial_messages.dart';
+import 'tutorial_nav_observer.dart';
 import 'tutorial_targets.dart';
 
-class TutorialOverlay extends StatefulWidget {
-  final TutorialMessage message;
-  final int? stepIndex;
-  final int? stepCount;
+class TutorialOverlay {
+  static VoidCallback? _activeDismiss;
 
-  const TutorialOverlay({
-    super.key,
-    required this.message,
-    this.stepIndex,
-    this.stepCount,
-  });
-
-  static PageRouteBuilder<void> route({
+  static Future<void> show(
+    BuildContext context, {
     required TutorialMessage message,
     int? stepIndex,
     int? stepCount,
-  }) {
-    return PageRouteBuilder<void>(
-      opaque: false,
-      barrierDismissible: false,
-      transitionDuration: const Duration(milliseconds: 220),
-      reverseTransitionDuration: const Duration(milliseconds: 160),
-      pageBuilder: (_, _, _) => TutorialOverlay(
+    bool forced = true,
+  }) async {
+    final overlay = Overlay.of(context, rootOverlay: true);
+    final priorDismiss = _activeDismiss;
+    if (priorDismiss != null) {
+      priorDismiss();
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+    }
+    final completer = Completer<void>();
+    late final OverlayEntry entry;
+    void dismiss() {
+      if (!completer.isCompleted) completer.complete();
+    }
+
+    _activeDismiss = dismiss;
+
+    entry = OverlayEntry(
+      builder: (_) => _TutorialOverlay(
         message: message,
         stepIndex: stepIndex,
         stepCount: stepCount,
+        forced: forced,
+        onDismiss: dismiss,
       ),
-      transitionsBuilder: (_, anim, _, child) {
-        final curved = CurvedAnimation(
-          parent: anim,
-          curve: Curves.easeOutCubic,
-        );
-        return FadeTransition(
-          opacity: curved,
-          child: ScaleTransition(
-            scale: Tween<double>(begin: 0.96, end: 1.0).animate(curved),
-            child: child,
-          ),
-        );
-      },
     );
+    overlay.insert(entry);
+    try {
+      await completer.future;
+    } finally {
+      if (_activeDismiss == dismiss) _activeDismiss = null;
+      try {
+        entry.remove();
+      } catch (_) {}
+    }
   }
-
-  @override
-  State<TutorialOverlay> createState() => _TutorialOverlayState();
 }
 
-class _TutorialOverlayState extends State<TutorialOverlay>
+class _TutorialOverlay extends StatefulWidget {
+  final TutorialMessage message;
+  final int? stepIndex;
+  final int? stepCount;
+  final bool forced;
+  final VoidCallback onDismiss;
+
+  const _TutorialOverlay({
+    required this.message,
+    required this.onDismiss,
+    this.stepIndex,
+    this.stepCount,
+    this.forced = true,
+  });
+
+  @override
+  State<_TutorialOverlay> createState() => _TutorialOverlayState();
+}
+
+class _TutorialOverlayState extends State<_TutorialOverlay>
     with TickerProviderStateMixin {
   late final AnimationController _pulse;
+  late final AnimationController _entry;
   Rect? _targetRect;
+  bool _dismissed = false;
+  late final VoidCallback _navDismisser;
+  Timer? _resolveTimer;
 
   @override
   void initState() {
@@ -64,7 +91,34 @@ class _TutorialOverlayState extends State<TutorialOverlay>
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
+    _entry = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    )..forward();
+
+    _navDismisser = _dismiss;
+    TutorialNavObserver.instance.register(_navDismisser);
+
+    if (!widget.forced) {
+      GestureBinding.instance.pointerRouter.addGlobalRoute(_onGlobalPointer);
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) => _resolveRect());
+    _resolveTimer = Timer.periodic(
+      const Duration(milliseconds: 500),
+      (_) => _resolveRect(),
+    );
+  }
+
+  void _onGlobalPointer(PointerEvent event) {
+    if (_dismissed || !mounted) return;
+    if (event is! PointerDownEvent) return;
+    final spot = _targetRect;
+    if (spot == null) return;
+    if (!spot.inflate(12).contains(event.position)) return;
+    Future<void>.delayed(const Duration(milliseconds: 180), () {
+      if (mounted) _dismiss();
+    });
   }
 
   void _resolveRect() {
@@ -73,15 +127,22 @@ class _TutorialOverlayState extends State<TutorialOverlay>
     if (r != _targetRect) setState(() => _targetRect = r);
   }
 
-  @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
+  void _dismiss() {
+    if (_dismissed) return;
+    _dismissed = true;
+    widget.onDismiss();
   }
 
-  void _dismiss() {
-    if (!mounted) return;
-    Navigator.of(context).maybePop();
+  @override
+  void dispose() {
+    TutorialNavObserver.instance.unregister(_navDismisser);
+    if (!widget.forced) {
+      GestureBinding.instance.pointerRouter.removeGlobalRoute(_onGlobalPointer);
+    }
+    _resolveTimer?.cancel();
+    _pulse.dispose();
+    _entry.dispose();
+    super.dispose();
   }
 
   @override
@@ -99,22 +160,30 @@ class _TutorialOverlayState extends State<TutorialOverlay>
           )
         : raw.inflate(10);
 
-    return Material(
-      type: MaterialType.transparency,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: _dismiss,
+    final entryAnim = CurvedAnimation(
+      parent: _entry,
+      curve: Curves.easeOutCubic,
+    );
+
+    return FadeTransition(
+      opacity: entryAnim,
+      child: Material(
+        type: MaterialType.transparency,
         child: Stack(
           children: [
             Positioned.fill(
-              child: CustomPaint(
-                painter: _SpotlightPainter(
-                  rect: spot,
-                  radius: 14,
-                  dimColor: Colors.black.withValues(alpha: 0.52),
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _SpotlightPainter(
+                    rect: spot,
+                    radius: 14,
+                    dimColor: Colors.black.withValues(alpha: 0.52),
+                  ),
                 ),
               ),
             ),
+
+            ..._buildBlockingRegions(raw == null ? null : spot, size),
 
             if (raw != null)
               AnimatedBuilder(
@@ -133,7 +202,6 @@ class _TutorialOverlayState extends State<TutorialOverlay>
                             color: tint.withValues(alpha: 0.80 - 0.45 * t),
                             width: 2,
                           ),
-
                           boxShadow: [
                             BoxShadow(
                               color: tint.withValues(alpha: 0.22 + 0.10 * t),
@@ -148,24 +216,113 @@ class _TutorialOverlayState extends State<TutorialOverlay>
                 },
               ),
 
-            Positioned.fill(
-              child: SafeArea(
-                child: _CaptionPositioner(
-                  spot: raw,
-                  child: _CaptionCard(
-                    title: widget.message.title,
-                    body: widget.message.body,
+            if (widget.message.gesture != null)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: GestureIndicator(
+                    gesture: widget.message.gesture!,
+                    targetRect: raw,
+                    screenSize: size,
                     tint: tint,
-                    icon: chrome.icon,
-                    pageLabel: chrome.label,
-                    stepIndex: widget.stepIndex,
-                    stepCount: widget.stepCount,
                   ),
                 ),
+              ),
+
+            Positioned.fill(
+              child: SafeArea(
+                child: widget.forced
+                    ? IgnorePointer(
+                        child: _CaptionPositioner(
+                          spot: raw,
+                          child: _captionCard(chrome, tint),
+                        ),
+                      )
+                    : _CaptionPositioner(
+                        spot: raw,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _dismiss,
+                          child: _captionCard(chrome, tint),
+                        ),
+                      ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _captionCard(MainScreenChrome chrome, Color tint) {
+    return _CaptionCard(
+      title: widget.message.title,
+      body: widget.message.body,
+      tint: tint,
+      icon: chrome.icon,
+      pageLabel: chrome.label,
+      stepIndex: widget.stepIndex,
+      stepCount: widget.stepCount,
+      forced: widget.forced,
+    );
+  }
+
+  bool get _gestureIsSwipe {
+    final g = widget.message.gesture;
+    return g == TutorialGesture.swipeLeft ||
+        g == TutorialGesture.swipeRight ||
+        g == TutorialGesture.swipeUp ||
+        g == TutorialGesture.swipeDown;
+  }
+
+  List<Widget> _buildBlockingRegions(Rect? spot, Size size) {
+    if (spot == null) {
+      if (_gestureIsSwipe) return const [];
+      return [
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.forced ? () {} : _dismiss,
+            onLongPress: widget.forced ? () {} : null,
+            onPanStart: widget.forced ? (_) {} : (_) => _dismiss(),
+          ),
+        ),
+      ];
+    }
+    return [
+      _block(0, 0, size.width, spot.top.clamp(0.0, size.height)),
+      _block(
+        0,
+        spot.bottom.clamp(0.0, size.height),
+        size.width,
+        size.height - spot.bottom.clamp(0.0, size.height),
+      ),
+      _block(
+        0,
+        spot.top.clamp(0.0, size.height),
+        spot.left.clamp(0.0, size.width),
+        spot.height.clamp(0.0, size.height),
+      ),
+      _block(
+        spot.right.clamp(0.0, size.width),
+        spot.top.clamp(0.0, size.height),
+        size.width - spot.right.clamp(0.0, size.width),
+        spot.height.clamp(0.0, size.height),
+      ),
+    ];
+  }
+
+  Widget _block(double left, double top, double width, double height) {
+    if (width <= 0 || height <= 0) return const SizedBox.shrink();
+    return Positioned(
+      left: left,
+      top: top,
+      width: width,
+      height: height,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.forced ? () {} : _dismiss,
+        onLongPress: widget.forced ? () {} : null,
+        onPanStart: widget.forced ? (_) {} : (_) => _dismiss(),
       ),
     );
   }
@@ -258,6 +415,7 @@ class _CaptionCard extends StatelessWidget {
   final String pageLabel;
   final int? stepIndex;
   final int? stepCount;
+  final bool forced;
 
   const _CaptionCard({
     required this.title,
@@ -267,6 +425,7 @@ class _CaptionCard extends StatelessWidget {
     required this.pageLabel,
     this.stepIndex,
     this.stepCount,
+    this.forced = true,
   });
 
   @override
@@ -315,7 +474,6 @@ class _CaptionCard extends StatelessWidget {
                 ),
               ),
             ),
-
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
               child: Column(
@@ -406,21 +564,25 @@ class _CaptionCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            Icon(
+                              forced
+                                  ? Icons.touch_app_outlined
+                                  : Icons.arrow_forward_rounded,
+                              size: 13,
+                              color: tint,
+                            ),
+                            const SizedBox(width: 4),
                             Text(
-                              showDots && stepIndex! < stepCount!
-                                  ? 'Tap to continue'
-                                  : 'Tap to dismiss',
+                              forced
+                                  ? 'Try the gesture'
+                                  : (showDots && stepIndex! < stepCount!
+                                        ? 'Tap to continue'
+                                        : 'Tap to dismiss'),
                               style: TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w600,
                                 color: tint,
                               ),
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(
-                              Icons.arrow_forward_rounded,
-                              size: 13,
-                              color: tint,
                             ),
                           ],
                         ),

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/database_helper.dart';
+import '../tutorial/learn_button.dart';
+import '../tutorial/tutorial_nav_observer.dart';
 import '../models/category.dart';
 import '../models/income_source.dart';
 import '../models/ledger_entry.dart';
@@ -63,6 +65,9 @@ class _RecordsScreenState extends State<RecordsScreen>
 
   @override
   void firePrimaryAction() => _toggleGraph();
+
+  @override
+  bool get hasData => entries.isNotEmpty;
 
   static const _sortPrefsKey = 'records_sort_mode';
   static const _filterPrefsKey = 'records_type_filter';
@@ -718,6 +723,7 @@ class _RecordsScreenState extends State<RecordsScreen>
     } else {
       _graphAnim.reverse();
     }
+    TutorialNavObserver.instance.notifyDismiss();
   }
 
   Future<void> _pickMonth() async {
@@ -913,6 +919,7 @@ class _RecordsScreenState extends State<RecordsScreen>
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         titleSpacing: 8,
         leadingWidth: 80,
@@ -941,6 +948,7 @@ class _RecordsScreenState extends State<RecordsScreen>
           ],
         ),
         actions: [
+          const LearnButton(page: MainScreen.records),
           IconButton(
             icon: const SpinningIcon(
               icon: Icons.settings_outlined,

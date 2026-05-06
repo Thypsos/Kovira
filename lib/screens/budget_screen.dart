@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
+import '../tutorial/learn_button.dart';
 import '../models/category.dart';
 import '../theme/app_colors.dart';
 import '../utils/currency_symbol.dart';
@@ -25,6 +26,9 @@ class _BudgetScreenState extends State<BudgetScreen>
     implements ShellRefreshable, ShellPrimaryAction {
   @override
   void firePrimaryAction() => _pickCategoryToBudget();
+
+  @override
+  bool get hasData => _budgets.isNotEmpty;
 
   @override
   void refreshFromShell() => _load();
@@ -90,6 +94,7 @@ class _BudgetScreenState extends State<BudgetScreen>
               width: 260,
               child: TutorialFireOnMount(
                 messageId: TutorialIds.budgetDialogFields,
+                pendingDialogKey: 'budget',
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -283,6 +288,7 @@ class _BudgetScreenState extends State<BudgetScreen>
         : (totalSpent / totalBudget).clamp(0.0, 1.0);
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         titleSpacing: 8,
         leadingWidth: 80,
@@ -311,6 +317,7 @@ class _BudgetScreenState extends State<BudgetScreen>
           ],
         ),
         actions: [
+          const LearnButton(page: MainScreen.budget),
           IconButton(
             icon: const SpinningIcon(
               icon: Icons.settings_outlined,

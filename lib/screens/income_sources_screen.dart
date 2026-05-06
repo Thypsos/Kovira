@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../data/database_helper.dart';
+import '../tutorial/learn_button.dart';
 import '../data/notification_service.dart';
 import '../models/income_source.dart';
 import '../models/income_template.dart';
@@ -99,6 +100,9 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
   void firePrimaryAction() => _addOrEditAccount();
 
   @override
+  bool get hasData => activeSources.isNotEmpty;
+
+  @override
   void refreshFromShell() => _load();
   List<IncomeSource> activeSources = [];
   List<IncomeSource> archivedSources = [];
@@ -195,6 +199,7 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
             width: 320,
             child: TutorialFireOnMount(
               messageId: TutorialIds.acctDialogFields,
+              pendingDialogKey: 'account',
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -2276,6 +2281,7 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
     final total = activeSources.fold<int>(0, (sum, s) => sum + s.balance);
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         titleSpacing: 8,
         leadingWidth: 80,
@@ -2304,6 +2310,7 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
           ],
         ),
         actions: [
+          const LearnButton(page: MainScreen.accounts),
           IconButton(
             icon: const SpinningIcon(
               icon: Icons.settings_outlined,
