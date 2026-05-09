@@ -114,15 +114,14 @@ No permission is requested unless you actually use the feature it powers.
 - No third-party analytics, crash reporters, or ad SDKs
 
 Bugs and feature requests go in [Issues](https://github.com/Thypsos/Kovira/issues).
-PRs welcome for fixes; for new features please open an issue first so we
-can discuss scope.
 
 ## License
 
-Kovira is released under the **GNU General Public License v3.0**. See
-[LICENSE](LICENSE) for the full text. In short: you can use, modify, and
-redistribute Kovira freely, but any redistributed version must remain open
-source under the same license.
+Kovira is **proprietary, all rights reserved**. The source is published
+in this repository for transparency and review only. See [LICENSE](LICENSE)
+for the full text. You may not copy, modify, redistribute, or build derivative
+works without prior written permission from the copyright holder. Contact via
+the repository for licensing or commercial inquiries.
 
 ---
 
