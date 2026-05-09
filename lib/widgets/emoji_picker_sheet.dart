@@ -1,3 +1,4 @@
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
 
 Future<String?> showEmojiPickerSheet(
@@ -8,60 +9,127 @@ Future<String?> showEmojiPickerSheet(
   return showModalBottomSheet<String>(
     context: context,
     backgroundColor: Theme.of(context).colorScheme.surface,
+    isScrollControlled: true,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (ctx) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 10),
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Theme.of(ctx).colorScheme.outline.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-            child: Row(
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+    builder: (ctx) {
+      final cs = Theme.of(ctx).colorScheme;
+      final size = MediaQuery.of(ctx).size;
+      return SafeArea(
+        child: SizedBox(
+          height: size.height * 0.78,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 10),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: cs.outline.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-              ],
-            ),
-          ),
-          SizedBox(
-            height: 280,
-            child: GridView.count(
-              crossAxisCount: 6,
-              padding: const EdgeInsets.all(12),
-              children: palette
-                  .map(
-                    (e) => InkWell(
-                      borderRadius: BorderRadius.circular(8),
-                      onTap: () => Navigator.pop(ctx, e),
-                      child: Container(
-                        alignment: Alignment.center,
-                        child: Text(e, style: const TextStyle(fontSize: 26)),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                child: Row(
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  )
-                  .toList(),
-            ),
+                  ],
+                ),
+              ),
+              if (palette.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Suggestions',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface.withValues(alpha: 0.6),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  height: 56,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: palette.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 6),
+                    itemBuilder: (_, i) {
+                      final e = palette[i];
+                      return InkWell(
+                        borderRadius: BorderRadius.circular(10),
+                        onTap: () => Navigator.pop(ctx, e),
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            e,
+                            style: const TextStyle(fontSize: 26),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const Divider(height: 20),
+              ],
+              Expanded(
+                child: EmojiPicker(
+                  onEmojiSelected: (cat, emoji) =>
+                      Navigator.pop(ctx, emoji.emoji),
+                  config: Config(
+                    height: size.height * 0.78,
+                    emojiViewConfig: EmojiViewConfig(
+                      backgroundColor: cs.surface,
+                      columns: 8,
+                      emojiSizeMax: 28,
+                    ),
+                    categoryViewConfig: CategoryViewConfig(
+                      backgroundColor: cs.surface,
+                      iconColor: cs.onSurface.withValues(alpha: 0.4),
+                      iconColorSelected: cs.primary,
+                      indicatorColor: cs.primary,
+                    ),
+                    bottomActionBarConfig: BottomActionBarConfig(
+                      backgroundColor: cs.surface,
+                      buttonColor: cs.primary,
+                      buttonIconColor: cs.onPrimary,
+                      showBackspaceButton: false,
+                      showSearchViewButton: true,
+                    ),
+                    searchViewConfig: SearchViewConfig(
+                      backgroundColor: cs.surface,
+                      buttonIconColor: cs.onSurface,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    ),
+        ),
+      );
+    },
   );
 }
 

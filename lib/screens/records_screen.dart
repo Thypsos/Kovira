@@ -92,6 +92,7 @@ class _RecordsScreenState extends State<RecordsScreen>
   int? _minCents;
   int? _maxCents;
   Set<int> _selectedAccounts = <int>{};
+  Set<int> _selectedTagIds = <int>{};
   bool _showGraph = false;
   late AnimationController _graphAnim;
   late Animation<double> _graphFade;
@@ -221,6 +222,10 @@ class _RecordsScreenState extends State<RecordsScreen>
           !_selectedAccounts.contains(e.sourceId)) {
         return false;
       }
+      if (_selectedTagIds.isNotEmpty &&
+          !_selectedTagIds.contains(e.categoryId)) {
+        return false;
+      }
       return true;
     }).toList();
   }
@@ -229,7 +234,176 @@ class _RecordsScreenState extends State<RecordsScreen>
       _dateRange != null ||
       _minCents != null ||
       _maxCents != null ||
-      _selectedAccounts.isNotEmpty;
+      _selectedAccounts.isNotEmpty ||
+      _selectedTagIds.isNotEmpty;
+
+  Widget _tagFilterChip(ColorScheme cs) {
+    final selected = _selectedTagIds.isNotEmpty;
+    final label = selected
+        ? 'Tag (${_selectedTagIds.length})'
+        : 'Tag';
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: GestureDetector(
+        onTap: _openTagFilter,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: selected
+                ? cs.primary.withValues(alpha: 0.15)
+                : cs.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: selected ? cs.primary : Colors.transparent,
+              width: 1.5,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.local_offer_outlined,
+                size: 14,
+                color: selected ? cs.primary : cs.onSurface,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? cs.primary : cs.onSurface,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openTagFilter() async {
+    final cs = Theme.of(context).colorScheme;
+    final draft = Set<int>.from(_selectedTagIds);
+    final applied = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'Filter by tag',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => setSheet(draft.clear),
+                    child: const Text('Clear'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(ctx).size.height * 0.5,
+                ),
+                child: SingleChildScrollView(
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: categories.map((c) {
+                      final sel = draft.contains(c.id);
+                      return GestureDetector(
+                        onTap: () => setSheet(() {
+                          if (sel) {
+                            draft.remove(c.id);
+                          } else {
+                            draft.add(c.id!);
+                          }
+                        }),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            color: sel
+                                ? cs.primary.withValues(alpha: 0.18)
+                                : cs.surfaceContainerHighest,
+                            border: Border.all(
+                              color: sel ? cs.primary : Colors.transparent,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                c.icon,
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                c.name,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: sel
+                                      ? cs.primary
+                                      : cs.onSurface,
+                                  fontWeight: sel
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Apply'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (applied == true && mounted) {
+      setState(() => _selectedTagIds = draft);
+    }
+  }
 
   Widget _typeFilterPill(ColorScheme cs) {
     const all = {'expense', 'income', 'transfer'};
@@ -1174,6 +1348,7 @@ class _RecordsScreenState extends State<RecordsScreen>
                             RecordSort.amountAsc,
                             cs,
                           ),
+                          _tagFilterChip(cs),
                         ],
                       ),
                     ),

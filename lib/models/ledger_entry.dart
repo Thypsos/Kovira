@@ -9,6 +9,9 @@ class LedgerEntry {
   final String name;
   final DateTime date;
   final String status;
+  final int? linkedDueId;
+  final int? billTemplateId;
+  final int? linkedTransferId;
 
   LedgerEntry({
     this.id,
@@ -21,6 +24,9 @@ class LedgerEntry {
     required this.name,
     required this.date,
     this.status = 'paid',
+    this.linkedDueId,
+    this.billTemplateId,
+    this.linkedTransferId,
   });
 
   int get remainingDue => amount - paidAmount;
@@ -37,6 +43,9 @@ class LedgerEntry {
       'name': name,
       'date': date.toIso8601String(),
       'status': status,
+      'linkedDueId': linkedDueId,
+      'billTemplateId': billTemplateId,
+      'linkedTransferId': linkedTransferId,
     };
   }
 
@@ -52,6 +61,9 @@ class LedgerEntry {
       name: map['name'] as String,
       date: DateTime.parse(map['date'] as String),
       status: (map['status'] as String?) ?? 'paid',
+      linkedDueId: map['linkedDueId'] as int?,
+      billTemplateId: map['billTemplateId'] as int?,
+      linkedTransferId: map['linkedTransferId'] as int?,
     );
   }
 }

@@ -1398,26 +1398,54 @@ class _HomeScreenState extends State<HomeScreen>
                   color: cs.onSurface.withValues(alpha: 0.6),
                 ),
               ),
-              trailing: GestureDetector(
-                onTap: () => _showPayDialog(e),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    'Clear',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+              onLongPress: () => _showDueActions(e),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: () => _showPayDialog(e, partial: false),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Full',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: () => _showPayDialog(e, partial: true),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade700,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Partial',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           );
@@ -1426,8 +1454,131 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Future<void> _showPayDialog(LedgerEntry due) async {
+  Future<void> _showDueActions(LedgerEntry due) async {
+    if (!mounted) return;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit, size: 24),
+              title: const Text('Edit', style: TextStyle(fontSize: 17)),
+              onTap: () => Navigator.pop(context, 'edit'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, size: 24, color: Colors.red),
+              title: const Text(
+                'Remove',
+                style: TextStyle(fontSize: 17, color: Colors.red),
+              ),
+              onTap: () => Navigator.pop(context, 'remove'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (action == 'edit') {
+      final c = await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => AddEntryScreen(existing: due)),
+      );
+      if (c == true && mounted) _load();
+    } else if (action == 'remove') {
+      await DatabaseHelper.instance.deleteEntry(due.id!);
+      if (!mounted) return;
+      _load();
+    }
+  }
+
+  Future<void> _showPayDialog(LedgerEntry due, {bool partial = false}) async {
     if (sources.isEmpty) return;
+    if (!partial) {
+      IncomeSource? payFrom = sources.first;
+      final picked = await showDialog<IncomeSource?>(
+        context: context,
+        builder: (_) => StatefulBuilder(
+          builder: (ctx, setDlg) => AlertDialog(
+            title: Text(
+              'Clear "${due.name}"',
+              style: const TextStyle(fontSize: 20),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Pay ${formatMoney(due.remainingDue)} from:',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 10),
+                  ...sources.map((s) {
+                    final sel = s.id == payFrom?.id;
+                    return GestureDetector(
+                      onTap: () => setDlg(() => payFrom = s),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: sel
+                              ? Color(s.color).withValues(alpha: 0.2)
+                              : Theme.of(
+                                  ctx,
+                                ).colorScheme.surfaceContainerHighest,
+                          border: sel
+                              ? Border.all(color: Color(s.color), width: 2)
+                              : null,
+                        ),
+                        child: Row(
+                          children: [
+                            Text(s.icon, style: const TextStyle(fontSize: 22)),
+                            const SizedBox(width: 10),
+                            Text(s.name, style: const TextStyle(fontSize: 16)),
+                            const Spacer(),
+                            Text(
+                              formatMoney(s.balance),
+                              style: TextStyle(
+                                color: Theme.of(
+                                  ctx,
+                                ).colorScheme.onSurface.withValues(alpha: 0.5),
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, null),
+                child: const Text('Cancel', style: TextStyle(fontSize: 16)),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, payFrom),
+                child: const Text('Clear', style: TextStyle(fontSize: 16)),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (picked == null) return;
+      await DatabaseHelper.instance.payDue(
+        due.id!,
+        due.remainingDue,
+        picked.id!,
+      );
+      if (!mounted) return;
+      _load();
+      return;
+    }
     IncomeSource? payFrom = sources.first;
     final amountCtrl = TextEditingController(
       text: formatMoneyCompact(due.remainingDue),
@@ -1514,8 +1665,29 @@ class _HomeScreenState extends State<HomeScreen>
               child: const Text('Cancel', style: TextStyle(fontSize: 16)),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Clear', style: TextStyle(fontSize: 16)),
+              onPressed: () {
+                final entered = parseCents(amountCtrl.text) ?? 0;
+                if (entered <= 0) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(
+                      content: Text('Enter an amount greater than zero.'),
+                    ),
+                  );
+                  return;
+                }
+                if (entered > due.remainingDue) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Cannot exceed remaining due (${formatMoney(due.remainingDue)}).',
+                      ),
+                    ),
+                  );
+                  return;
+                }
+                Navigator.pop(ctx, true);
+              },
+              child: const Text('Pay', style: TextStyle(fontSize: 16)),
             ),
           ],
         ),

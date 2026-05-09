@@ -32,7 +32,7 @@ class DatabaseHelper {
         final preOpen = await openReadOnlyDatabase(path);
         final storedVersion = await preOpen.getVersion();
         await preOpen.close();
-        if (storedVersion < 14 && storedVersion > 0) {
+        if (storedVersion < 17 && storedVersion > 0) {
           final docs = await getApplicationDocumentsDirectory();
           final stamp = DateTime.now()
               .toIso8601String()
@@ -50,7 +50,7 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 14,
+      version: 17,
       onCreate: (db, version) async {
         await db.execute('''CREATE TABLE categories (
           id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, icon TEXT NOT NULL, useCount INTEGER NOT NULL DEFAULT 0, color INTEGER
@@ -63,12 +63,13 @@ class DatabaseHelper {
         await db.execute('''CREATE TABLE income_templates (
           id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, icon TEXT NOT NULL,
           sourceId INTEGER NOT NULL, amount INTEGER NOT NULL DEFAULT 0, isFixed INTEGER NOT NULL DEFAULT 1,
-          reminderDay INTEGER
+          reminderDay INTEGER, cadence TEXT NOT NULL DEFAULT 'monthly'
         )''');
         await db.execute('''CREATE TABLE ledger_entries (
           id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, categoryId INTEGER NOT NULL,
           sourceId INTEGER NOT NULL DEFAULT 1, toSourceId INTEGER, amount INTEGER NOT NULL,
-          paidAmount INTEGER NOT NULL DEFAULT 0, name TEXT NOT NULL, date TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'paid'
+          paidAmount INTEGER NOT NULL DEFAULT 0, name TEXT NOT NULL, date TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'paid',
+          linkedDueId INTEGER, billTemplateId INTEGER, linkedTransferId INTEGER
         )''');
         await db.execute('''CREATE TABLE category_suggestions (
           id INTEGER PRIMARY KEY AUTOINCREMENT, categoryId INTEGER NOT NULL, text TEXT NOT NULL,
@@ -85,7 +86,10 @@ class DatabaseHelper {
           toSourceId INTEGER NOT NULL,
           amount INTEGER NOT NULL DEFAULT 0,
           isFixed INTEGER NOT NULL DEFAULT 1,
-          reminderDay INTEGER
+          reminderDay INTEGER,
+          feeCents INTEGER NOT NULL DEFAULT 0,
+          feePercentBps INTEGER NOT NULL DEFAULT 0,
+          name TEXT NOT NULL DEFAULT ''
         )''');
         await db.execute('''CREATE TABLE category_budgets (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -355,8 +359,77 @@ class DatabaseHelper {
             );
           } catch (_) {}
         }
+        if (oldVersion < 15) {
+          try {
+            await db.execute(
+              "ALTER TABLE income_templates ADD COLUMN cadence TEXT NOT NULL DEFAULT 'monthly'",
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              'ALTER TABLE transfer_templates ADD COLUMN feeCents INTEGER NOT NULL DEFAULT 0',
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              'ALTER TABLE transfer_templates ADD COLUMN feePercentBps INTEGER NOT NULL DEFAULT 0',
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              'ALTER TABLE ledger_entries ADD COLUMN linkedDueId INTEGER',
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              'ALTER TABLE ledger_entries ADD COLUMN billTemplateId INTEGER',
+            );
+          } catch (_) {}
+        }
+        if (oldVersion < 16) {
+          try {
+            await db.execute(
+              "ALTER TABLE transfer_templates ADD COLUMN name TEXT NOT NULL DEFAULT ''",
+            );
+          } catch (_) {}
+        }
+        if (oldVersion < 17) {
+          try {
+            await db.execute(
+              'ALTER TABLE ledger_entries ADD COLUMN linkedTransferId INTEGER',
+            );
+          } catch (_) {}
+          try {
+            await db.update(
+              'categories',
+              {'name': 'Transfer fees'},
+              where: 'name = ?',
+              whereArgs: ['Fees'],
+            );
+          } catch (_) {}
+        }
       },
     );
+  }
+
+  Future<Category> getOrCreateTransferFeesCategory() async {
+    final db = await database;
+    final rows = await db.query(
+      'categories',
+      where: 'name = ?',
+      whereArgs: ['Transfer fees'],
+      limit: 1,
+    );
+    if (rows.isNotEmpty) {
+      return Category.fromMap(rows.first);
+    }
+    final id = await db.insert('categories', {
+      'name': 'Transfer fees',
+      'icon': '💸',
+      'useCount': 0,
+      'color': null,
+    });
+    return Category(id: id, name: 'Transfer fees', icon: '💸', useCount: 0);
   }
 
   Future<int> getBudgetForCategory(int categoryId) async {
@@ -950,6 +1023,14 @@ class DatabaseHelper {
       await _adjustBalance(db, e.sourceId, e.amount);
       if (e.toSourceId != null) {
         await _adjustBalance(db, e.toSourceId!, -e.amount);
+      }
+      final linked = await db.query(
+        'ledger_entries',
+        where: 'linkedTransferId = ?',
+        whereArgs: [id],
+      );
+      for (final row in linked) {
+        await deleteEntry(row['id'] as int);
       }
     }
     await db.delete('ledger_entries', where: 'id = ?', whereArgs: [id]);

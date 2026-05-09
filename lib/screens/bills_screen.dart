@@ -437,9 +437,12 @@ class _BillsScreenState extends State<BillsScreen>
                         children: [
                           Row(
                             children: [
-                              EmojiPlaceholderBox(
+                              EmojiPickerButton(
                                 value: selectedIcon,
                                 tint: Colors.orange,
+                                palette: billIconPalette,
+                                onPicked: (e) =>
+                                    setDlg(() => selectedIcon = e),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
@@ -965,6 +968,7 @@ class _BillsScreenState extends State<BillsScreen>
         amount: recordAmount,
         name: bill.name,
         date: DateTime.now(),
+        billTemplateId: bill.id,
       ),
     );
 

@@ -1,9 +1,11 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 import '../models/income_template.dart';
 import '../models/transfer_template.dart';
 import '../models/income_source.dart';
+import '../utils/currency_symbol.dart';
 
 class NotificationService {
   NotificationService._();
@@ -30,6 +32,11 @@ class NotificationService {
   Future<void> init() async {
     if (_initialized) return;
     tz_data.initializeTimeZones();
+    try {
+      final name = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(name));
+      CurrencyDetector.cachedTimezone = name;
+    } catch (_) {}
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const settings = InitializationSettings(android: android);
     await _plugin.initialize(settings);
@@ -65,25 +72,63 @@ class NotificationService {
     return next;
   }
 
+  tz.TZDateTime _nextWeekly(int weekday) {
+    final now = tz.TZDateTime.now(tz.local);
+    var next = tz.TZDateTime(tz.local, now.year, now.month, now.day, 12, 0);
+    while (next.weekday != weekday || !next.isAfter(now)) {
+      next = next.add(const Duration(days: 1));
+    }
+    return next;
+  }
+
+  tz.TZDateTime _nextDaily() {
+    final now = tz.TZDateTime.now(tz.local);
+    var next = tz.TZDateTime(tz.local, now.year, now.month, now.day, 12, 0);
+    if (!next.isAfter(now)) {
+      next = next.add(const Duration(days: 1));
+    }
+    return next;
+  }
+
   tz.TZDateTime _fromDateTime(DateTime dt) {
     return tz.TZDateTime.from(dt, tz.local);
   }
 
   Future<void> scheduleIncomeReminder(IncomeTemplate t) async {
     if (t.id == null || t.reminderDay == null) return;
+    if (t.cadence == IncomeCadence.hourly) return;
     await cancelIncomeReminder(t.id!);
+
+    final tz.TZDateTime when;
+    final DateTimeComponents repeat;
+    switch (t.cadence) {
+      case IncomeCadence.daily:
+        when = _nextDaily();
+        repeat = DateTimeComponents.time;
+        break;
+      case IncomeCadence.weekly:
+        when = _nextWeekly(t.reminderDay!);
+        repeat = DateTimeComponents.dayOfWeekAndTime;
+        break;
+      case IncomeCadence.monthly:
+        when = _nextOccurrence(t.reminderDay!);
+        repeat = DateTimeComponents.dayOfMonthAndTime;
+        break;
+      case IncomeCadence.hourly:
+        return;
+    }
 
     try {
       await _plugin.zonedSchedule(
         t.id!,
         '${t.icon} ${t.name}',
         'Time to record your income — tap to open Kovira',
-        _nextOccurrence(t.reminderDay!),
+        when,
         _details,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
+        matchDateTimeComponents: repeat,
       );
     } catch (e) {
       try {
@@ -91,12 +136,12 @@ class NotificationService {
           t.id!,
           '${t.icon} ${t.name}',
           'Time to record your income — tap to open Kovira',
-          _nextOccurrence(t.reminderDay!),
+          when,
           _details,
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
-          matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
+          matchDateTimeComponents: repeat,
         );
       } catch (e2) {
         // ignore: empty_catches

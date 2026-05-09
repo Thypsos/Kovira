@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:in_app_update/in_app_update.dart';
 import 'data/settings_service.dart';
 import 'screens/welcome_screen.dart';
 import 'tutorial/tutorial_nav_observer.dart';
@@ -11,6 +14,8 @@ final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier<ThemeMode>(
 
 final ValueNotifier<BottomBarMode> bottomBarModeNotifier =
     ValueNotifier<BottomBarMode>(BottomBarMode.tabs);
+
+final ValueNotifier<int> currencySymbolNotifier = ValueNotifier<int>(0);
 
 class KoviraApp extends StatefulWidget {
   const KoviraApp({super.key});
@@ -26,6 +31,22 @@ class _KoviraAppState extends State<KoviraApp> {
   void initState() {
     super.initState();
     _loadSettings();
+    _checkForAppUpdate();
+  }
+
+  Future<void> _checkForAppUpdate() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final info = await InAppUpdate.checkForUpdate();
+      if (info.updateAvailability == UpdateAvailability.updateAvailable) {
+        if (info.immediateUpdateAllowed) {
+          await InAppUpdate.performImmediateUpdate();
+        } else if (info.flexibleUpdateAllowed) {
+          await InAppUpdate.startFlexibleUpdate();
+          await InAppUpdate.completeFlexibleUpdate();
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadSettings() async {

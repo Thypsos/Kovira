@@ -1,3 +1,32 @@
+enum IncomeCadence { hourly, daily, weekly, monthly }
+
+IncomeCadence cadenceFromString(String? s) {
+  switch (s) {
+    case 'hourly':
+      return IncomeCadence.hourly;
+    case 'daily':
+      return IncomeCadence.daily;
+    case 'weekly':
+      return IncomeCadence.weekly;
+    case 'monthly':
+    default:
+      return IncomeCadence.monthly;
+  }
+}
+
+String cadenceLabel(IncomeCadence c) {
+  switch (c) {
+    case IncomeCadence.hourly:
+      return 'Hourly';
+    case IncomeCadence.daily:
+      return 'Daily';
+    case IncomeCadence.weekly:
+      return 'Weekly';
+    case IncomeCadence.monthly:
+      return 'Monthly';
+  }
+}
+
 class IncomeTemplate {
   final int? id;
   final String name;
@@ -6,6 +35,7 @@ class IncomeTemplate {
   final int amount;
   final bool isFixed;
   final int? reminderDay;
+  final IncomeCadence cadence;
 
   IncomeTemplate({
     this.id,
@@ -15,6 +45,7 @@ class IncomeTemplate {
     required this.amount,
     required this.isFixed,
     this.reminderDay,
+    this.cadence = IncomeCadence.monthly,
   });
 
   factory IncomeTemplate.fromMap(Map<String, dynamic> map) {
@@ -26,6 +57,7 @@ class IncomeTemplate {
       amount: map['amount'] as int,
       isFixed: (map['isFixed'] as int) == 1,
       reminderDay: map['reminderDay'] as int?,
+      cadence: cadenceFromString(map['cadence'] as String?),
     );
   }
 
@@ -38,6 +70,7 @@ class IncomeTemplate {
       'amount': amount,
       'isFixed': isFixed ? 1 : 0,
       'reminderDay': reminderDay,
+      'cadence': cadence.name,
     };
   }
 }

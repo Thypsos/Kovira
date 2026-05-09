@@ -187,9 +187,11 @@ class _GoalsScreenState extends State<GoalsScreen>
                           children: [
                             Row(
                               children: [
-                                EmojiPlaceholderBox(
+                                EmojiPickerButton(
                                   value: icon,
                                   tint: Color(color),
+                                  palette: goalIconPalette,
+                                  onPicked: (e) => setS(() => icon = e),
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(

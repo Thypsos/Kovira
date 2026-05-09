@@ -212,9 +212,12 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
                         children: [
                           Row(
                             children: [
-                              EmojiPlaceholderBox(
+                              EmojiPickerButton(
                                 value: selectedIcon,
                                 tint: Color(selectedColor),
+                                palette: accountIconPalette,
+                                onPicked: (e) =>
+                                    setDlg(() => selectedIcon = e),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
@@ -499,9 +502,11 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
                         children: [
                           Row(
                             children: [
-                              EmojiPlaceholderBox(
+                              EmojiPickerButton(
                                 value: selIcon,
                                 tint: Colors.teal,
+                                palette: incomeIconPalette,
+                                onPicked: (e) => setDlg(() => selIcon = e),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
@@ -951,6 +956,7 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
         _preselectedSourceId ??
         (activeSources.isNotEmpty ? activeSources.first.id : null);
     int? reminderDay = existing?.reminderDay;
+    IncomeCadence cadence = existing?.cadence ?? IncomeCadence.monthly;
     String? nameError;
     String? amountError;
     String? sourceError;
@@ -1165,6 +1171,27 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
                       ],
                     ),
 
+                    const SizedBox(height: 12),
+                    const Text(
+                      'How often do you get paid?',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      children: IncomeCadence.values.map((c) {
+                        final sel = cadence == c;
+                        return ChoiceChip(
+                          label: Text(cadenceLabel(c)),
+                          selected: sel,
+                          onSelected: (_) => setDlg(() {
+                            cadence = c;
+                            reminderDay = null;
+                          }),
+                        );
+                      }).toList(),
+                    ),
+
                     if (isFixed) ...[
                       const SizedBox(height: 12),
                       TextField(
@@ -1241,92 +1268,11 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
                     const SizedBox(height: 14),
                     const Divider(),
                     const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(Icons.notifications_outlined, size: 20),
-                        const SizedBox(width: 8),
-                        const Expanded(
-                          child: Text(
-                            'Monthly reminder',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        if (reminderDay != null)
-                          TextButton(
-                            onPressed: () => setDlg(() => reminderDay = null),
-                            child: Text(
-                              'Day $reminderDay · clear',
-                              style: const TextStyle(fontSize: 13),
-                            ),
-                          ),
-                      ],
+                    _CadenceReminderPicker(
+                      cadence: cadence,
+                      reminderDay: reminderDay,
+                      onChange: (d) => setDlg(() => reminderDay = d),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Pick the day you usually receive this (optional):',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(
-                          ctx,
-                        ).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 42,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: 28,
-                        itemBuilder: (_, i) {
-                          final day = i + 1;
-                          final sel = reminderDay == day;
-                          return GestureDetector(
-                            onTap: () =>
-                                setDlg(() => reminderDay = sel ? null : day),
-                            child: Container(
-                              width: 38,
-                              height: 38,
-                              margin: const EdgeInsets.only(right: 6),
-                              decoration: BoxDecoration(
-                                color: sel
-                                    ? Theme.of(ctx).colorScheme.primary
-                                    : Theme.of(
-                                        ctx,
-                                      ).colorScheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                '$day',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: sel
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  color: sel
-                                      ? Theme.of(ctx).colorScheme.onPrimary
-                                      : Theme.of(ctx).colorScheme.onSurface,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    if (reminderDay != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          "You'll be reminded on day $reminderDay each month.",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(ctx).colorScheme.primary,
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               ),
@@ -1383,6 +1329,7 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
       amount: isFixed ? (parseCents(amountCtrl.text) ?? 0) : 0,
       isFixed: isFixed,
       reminderDay: reminderDay,
+      cadence: cadence,
     );
     if (existing == null) {
       final id = await DatabaseHelper.instance.addIncomeTemplate(t);
@@ -1394,6 +1341,7 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
         amount: t.amount,
         isFixed: t.isFixed,
         reminderDay: t.reminderDay,
+        cadence: t.cadence,
       );
       if (reminderDay != null) {
         await NotificationService.instance.scheduleIncomeReminder(saved);
@@ -1710,6 +1658,17 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
           ? formatMoneyCompact(existing.amount)
           : '',
     );
+    final nameCtrl = TextEditingController(text: existing?.name ?? '');
+    final feeFlatCtrl = TextEditingController(
+      text: existing != null && existing.feeCents > 0
+          ? formatMoneyCompact(existing.feeCents)
+          : '',
+    );
+    final feePercentCtrl = TextEditingController(
+      text: existing != null && existing.feePercentBps > 0
+          ? (existing.feePercentBps / 100).toStringAsFixed(2)
+          : '',
+    );
 
     bool isFixed = existing?.isFixed ?? false;
     int fromId =
@@ -1993,6 +1952,74 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
                       const SizedBox(height: 14),
                     ],
 
+                    TextField(
+                      controller: nameCtrl,
+                      style: const TextStyle(fontSize: 15),
+                      textCapitalization: TextCapitalization.words,
+                      decoration: InputDecoration(
+                        labelText: 'Name (optional)',
+                        hintText: 'e.g. Bank ATM, Other ATM',
+                        isDense: true,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    Text(
+                      'Transfer fee (optional)',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Theme.of(
+                          ctx,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: feeFlatCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            inputFormatters: [MoneyInputFormatter()],
+                            style: const TextStyle(fontSize: 15),
+                            decoration: InputDecoration(
+                              labelText: 'Flat',
+                              isDense: true,
+                              prefixIcon: amountPrefixIcon(ctx, fontSize: 15),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: feePercentCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            style: const TextStyle(fontSize: 15),
+                            decoration: InputDecoration(
+                              labelText: 'Percent',
+                              isDense: true,
+                              suffixText: '%',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+
                     Text(
                       'Monthly reminder (optional)',
                       style: TextStyle(
@@ -2116,6 +2143,10 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
       if (mounted) await ensureNotifPermission(context);
     }
     final amount = isFixed ? (parseCents(amountCtrl.text) ?? 0) : 0;
+    final feeFlat = parseCents(feeFlatCtrl.text) ?? 0;
+    final pctText = feePercentCtrl.text.trim();
+    final feePct = pctText.isEmpty ? 0.0 : (double.tryParse(pctText) ?? 0.0);
+    final feePercentBps = (feePct * 100).round().clamp(0, 100000);
     final t = TransferTemplate(
       id: existing?.id,
       fromSourceId: fromId,
@@ -2123,6 +2154,9 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
       amount: amount,
       isFixed: isFixed,
       reminderDay: reminderDay,
+      feeCents: feeFlat,
+      feePercentBps: feePercentBps,
+      name: nameCtrl.text.trim(),
     );
     int savedId;
     if (existing == null) {
@@ -2261,14 +2295,33 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
       if (ok != true) return;
       amount = parseCents(ctrl.text) ?? 0;
     }
-    if (amount <= 0 || fromSrc.balance < amount) return;
-    await DatabaseHelper.instance.addTransfer(
+    final feeAmount = t.feeForAmount(amount);
+    if (amount <= 0 || fromSrc.balance < amount + feeAmount) return;
+    final transferId = await DatabaseHelper.instance.addTransfer(
       fromSourceId: fromSrc.id!,
       toSourceId: toSrc.id!,
       amount: amount,
       name: '${fromSrc.icon} → ${toSrc.icon}',
       date: DateTime.now(),
     );
+    if (feeAmount > 0) {
+      final feeCat = await DatabaseHelper.instance
+          .getOrCreateTransferFeesCategory();
+      final feeName = t.name.isNotEmpty
+          ? '${t.name} fee'
+          : 'Transfer fee ${fromSrc.icon} → ${toSrc.icon}';
+      await DatabaseHelper.instance.addExpense(
+        LedgerEntry(
+          type: 'expense',
+          categoryId: feeCat.id!,
+          sourceId: fromSrc.id!,
+          amount: feeAmount,
+          name: feeName,
+          date: DateTime.now(),
+          linkedTransferId: transferId,
+        ),
+      );
+    }
     if (!mounted) return;
 
     _load();
@@ -3152,7 +3205,9 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        '${fromSrc?.name ?? '?'} → ${toSrc?.name ?? '?'}',
+                        t.name.isNotEmpty
+                            ? t.name
+                            : '${fromSrc?.name ?? '?'} → ${toSrc?.name ?? '?'}',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -3160,11 +3215,17 @@ class _IncomeSourcesScreenState extends State<IncomeSourcesScreen>
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
-                        t.isFixed ? formatMoney(t.amount) : 'Variable',
+                        [
+                          if (t.name.isNotEmpty)
+                            '${fromSrc?.name ?? '?'} → ${toSrc?.name ?? '?'}',
+                          t.isFixed ? formatMoney(t.amount) : 'Variable',
+                          if (t.hasFee) 'fee',
+                        ].join(' · '),
                         style: TextStyle(
                           fontSize: 12,
                           color: cs.onSurface.withValues(alpha: 0.55),
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -3353,6 +3414,192 @@ class _TypeBtn extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CadenceReminderPicker extends StatelessWidget {
+  final IncomeCadence cadence;
+  final int? reminderDay;
+  final ValueChanged<int?> onChange;
+
+  const _CadenceReminderPicker({
+    required this.cadence,
+    required this.reminderDay,
+    required this.onChange,
+  });
+
+  static const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    if (cadence == IncomeCadence.hourly) {
+      return Row(
+        children: [
+          const Icon(Icons.notifications_off_outlined, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Hourly reminders are off.',
+              style: TextStyle(
+                fontSize: 13,
+                color: cs.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    if (cadence == IncomeCadence.daily) {
+      return Row(
+        children: [
+          const Icon(Icons.notifications_active_outlined, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Daily reminder at noon.',
+              style: TextStyle(fontSize: 13, color: cs.onSurface),
+            ),
+          ),
+          Switch(
+            value: reminderDay != null,
+            onChanged: (on) => onChange(on ? 0 : null),
+          ),
+        ],
+      );
+    }
+    if (cadence == IncomeCadence.weekly) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.notifications_outlined, size: 20),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Weekly reminder',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                ),
+              ),
+              if (reminderDay != null)
+                TextButton(
+                  onPressed: () => onChange(null),
+                  child: const Text('Clear', style: TextStyle(fontSize: 13)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            height: 38,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _weekdays.length,
+              itemBuilder: (_, i) {
+                final day = i + 1;
+                final sel = reminderDay == day;
+                return GestureDetector(
+                  onTap: () => onChange(sel ? null : day),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: sel ? cs.primary : cs.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _weekdays[i],
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: sel ? FontWeight.bold : FontWeight.normal,
+                        color: sel ? cs.onPrimary : cs.onSurface,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.notifications_outlined, size: 20),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'Monthly reminder',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+              ),
+            ),
+            if (reminderDay != null)
+              TextButton(
+                onPressed: () => onChange(null),
+                child: Text(
+                  'Day $reminderDay · clear',
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Pick the day you usually receive this (optional):',
+          style: TextStyle(
+            fontSize: 12,
+            color: cs.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 42,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: 28,
+            itemBuilder: (_, i) {
+              final day = i + 1;
+              final sel = reminderDay == day;
+              return GestureDetector(
+                onTap: () => onChange(sel ? null : day),
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  margin: const EdgeInsets.only(right: 6),
+                  decoration: BoxDecoration(
+                    color: sel ? cs.primary : cs.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '$day',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: sel ? FontWeight.bold : FontWeight.normal,
+                      color: sel ? cs.onPrimary : cs.onSurface,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        if (reminderDay != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              "You'll be reminded on day $reminderDay each month.",
+              style: TextStyle(fontSize: 12, color: cs.primary),
+            ),
+          ),
+      ],
     );
   }
 }

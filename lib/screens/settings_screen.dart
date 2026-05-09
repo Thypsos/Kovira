@@ -7,6 +7,7 @@ import '../tutorial/learn_service.dart';
 import '../tutorial/tutorial_ids.dart';
 import '../tutorial/tutorial_service.dart';
 import '../tutorial/tutorial_targets.dart';
+import '../utils/currency_symbol.dart';
 import '../utils/money_input.dart';
 import '../widgets/live_icon.dart';
 import '../widgets/main_shell.dart';
@@ -637,11 +638,213 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     if (mounted) setState(() => _smartDecimals = v);
                   },
                 ),
+                const SizedBox(height: 6),
+                divider,
+                const SizedBox(height: 14),
+                ValueListenableBuilder<int>(
+                  valueListenable: currencySymbolNotifier,
+                  builder: (_, _, _) => _currencyRow(cs),
+                ),
               ],
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _currencyRow(ColorScheme cs) {
+    final override = SettingsService.instance.currencyOverride;
+    final auto = autoDetectedCurrencySymbol();
+    final shown = override ?? auto;
+    final label = override == null ? 'Auto · $auto' : 'Manual override';
+    return InkWell(
+      onTap: _openCurrencyPicker,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Icon(Icons.attach_money_outlined, size: 24, color: cs.primary),
+            const SizedBox(width: 16),
+            const Text('Currency', style: TextStyle(fontSize: 17)),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 4,
+              ),
+              decoration: BoxDecoration(
+                color: cs.primary.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: cs.primary.withValues(alpha: 0.4),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    shown,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: cs.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: cs.primary.withValues(alpha: 0.75),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.chevron_right,
+              color: cs.onSurface.withValues(alpha: 0.5),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openCurrencyPicker() async {
+    final cs = Theme.of(context).colorScheme;
+    final auto = autoDetectedCurrencySymbol();
+    final searchCtrl = TextEditingController();
+    final entries = targetMarketSymbols.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          final query = searchCtrl.text.trim().toUpperCase();
+          final filtered = query.isEmpty
+              ? entries
+              : entries
+                    .where(
+                      (e) =>
+                          e.key.contains(query) ||
+                          e.value.toUpperCase().contains(query),
+                    )
+                    .toList();
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 18,
+              bottom: 20 + MediaQuery.of(ctx).viewInsets.bottom,
+            ),
+            child: SizedBox(
+              height: MediaQuery.of(ctx).size.height * 0.7,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Currency',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                      const Spacer(),
+                      TextButton.icon(
+                        onPressed: () async {
+                          await SettingsService.instance.setCurrencyOverride(
+                            null,
+                          );
+                          currencySymbolNotifier.value++;
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (mounted) setState(() {});
+                        },
+                        icon: const Icon(Icons.auto_awesome, size: 18),
+                        label: Text('Use auto ($auto)'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: searchCtrl,
+                    onChanged: (_) => setSheet(() {}),
+                    decoration: InputDecoration(
+                      hintText: 'Search by country code or symbol',
+                      prefixIcon: const Icon(Icons.search),
+                      isDense: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (_, i) {
+                        final e = filtered[i];
+                        final selected =
+                            SettingsService.instance.currencyOverride ==
+                            e.value;
+                        return ListTile(
+                          dense: true,
+                          leading: SizedBox(
+                            width: 38,
+                            child: Center(
+                              child: Text(
+                                e.value,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: cs.primary,
+                                ),
+                              ),
+                            ),
+                          ),
+                          title: Text(
+                            e.key,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          trailing: selected
+                              ? Icon(Icons.check, color: cs.primary)
+                              : null,
+                          onTap: () async {
+                            await SettingsService.instance.setCurrencyOverride(
+                              e.value,
+                            );
+                            currencySymbolNotifier.value++;
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            if (mounted) setState(() {});
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/database_helper.dart';
+import '../models/bill_template.dart';
 import '../models/category.dart';
 import '../models/income_source.dart';
 import '../models/ledger_entry.dart';
@@ -21,6 +22,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
 
   List<LedgerEntry> entries = [];
   List<IncomeSource> sources = [];
+  List<BillTemplate> _bills = [];
   int _budget = 0;
   RecordSort _sort = RecordSort.dateDesc;
   DateTimeRange? _dateRange;
@@ -60,6 +62,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       DateTime.now(),
     );
     sources = await DatabaseHelper.instance.getAllSources();
+    _bills = await DatabaseHelper.instance.getBillTemplates();
     _budget = await DatabaseHelper.instance.getBudgetForCategory(
       widget.category.id!,
     );
@@ -68,6 +71,18 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
 
   IncomeSource? _sourceOf(int id) =>
       sources.where((s) => s.id == id).firstOrNull;
+
+  BillTemplate? _billFor(LedgerEntry e) {
+    if (e.billTemplateId != null) {
+      final byId = _bills
+          .where((b) => b.id == e.billTemplateId)
+          .firstOrNull;
+      if (byId != null) return byId;
+    }
+    final n = e.name.trim().toLowerCase();
+    if (n.isEmpty) return null;
+    return _bills.where((b) => b.name.trim().toLowerCase() == n).firstOrNull;
+  }
 
   Widget _budgetProgressBar(int spent, int budget) {
     final ratio = (spent / budget).clamp(0.0, 1.0);
@@ -570,11 +585,23 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                     itemBuilder: (_, i) {
                       final e = sorted[i];
                       final source = _sourceOf(e.sourceId);
+                      final bill = _billFor(e);
                       return ListTile(
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 20,
                           vertical: 4,
                         ),
+                        leading: bill == null
+                            ? null
+                            : SizedBox(
+                                width: 32,
+                                child: Center(
+                                  child: Text(
+                                    bill.icon,
+                                    style: const TextStyle(fontSize: 22),
+                                  ),
+                                ),
+                              ),
                         title: Text(
                           e.name,
                           style: const TextStyle(fontSize: 17),

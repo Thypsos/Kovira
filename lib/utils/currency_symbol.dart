@@ -3,7 +3,7 @@ import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-const Map<String, String> _targetMarketSymbols = {
+const Map<String, String> targetMarketSymbols = {
   'BD': '৳',
   'IN': '₹',
   'PK': '₨',
@@ -118,7 +118,122 @@ const Map<String, String> _languageFallback = {
   'en': '\$',
 };
 
-String deviceCurrencySymbol(BuildContext? context) {
+const Map<String, String> _timezoneToCountry = {
+  'Asia/Dhaka': 'BD',
+  'Asia/Kolkata': 'IN',
+  'Asia/Calcutta': 'IN',
+  'Asia/Karachi': 'PK',
+  'Asia/Colombo': 'LK',
+  'Asia/Kathmandu': 'NP',
+  'Asia/Thimphu': 'BT',
+  'Asia/Kabul': 'AF',
+  'Indian/Maldives': 'MV',
+  'Asia/Jakarta': 'ID',
+  'Asia/Makassar': 'ID',
+  'Asia/Jayapura': 'ID',
+  'Asia/Manila': 'PH',
+  'Asia/Ho_Chi_Minh': 'VN',
+  'Asia/Saigon': 'VN',
+  'Asia/Bangkok': 'TH',
+  'Asia/Kuala_Lumpur': 'MY',
+  'Asia/Kuching': 'MY',
+  'Asia/Yangon': 'MM',
+  'Asia/Rangoon': 'MM',
+  'Asia/Phnom_Penh': 'KH',
+  'Asia/Vientiane': 'LA',
+  'Asia/Singapore': 'SG',
+  'Africa/Nairobi': 'KE',
+  'Africa/Dar_es_Salaam': 'TZ',
+  'Africa/Kampala': 'UG',
+  'Africa/Lagos': 'NG',
+  'Africa/Accra': 'GH',
+  'Africa/Johannesburg': 'ZA',
+  'Africa/Cairo': 'EG',
+  'Africa/Casablanca': 'MA',
+  'Africa/Addis_Ababa': 'ET',
+  'Africa/Kigali': 'RW',
+  'Africa/Dakar': 'SN',
+  'Africa/Abidjan': 'CI',
+  'America/Sao_Paulo': 'BR',
+  'America/Manaus': 'BR',
+  'America/Recife': 'BR',
+  'America/Mexico_City': 'MX',
+  'America/Argentina/Buenos_Aires': 'AR',
+  'America/Buenos_Aires': 'AR',
+  'America/Bogota': 'CO',
+  'America/Lima': 'PE',
+  'America/Santiago': 'CL',
+  'America/Caracas': 'VE',
+  'Asia/Riyadh': 'SA',
+  'Asia/Dubai': 'AE',
+  'Asia/Tehran': 'IR',
+  'Asia/Baghdad': 'IQ',
+  'Asia/Amman': 'JO',
+  'Asia/Beirut': 'LB',
+  'Europe/Istanbul': 'TR',
+  'Asia/Istanbul': 'TR',
+  'Asia/Jerusalem': 'IL',
+  'America/New_York': 'US',
+  'America/Detroit': 'US',
+  'America/Chicago': 'US',
+  'America/Denver': 'US',
+  'America/Phoenix': 'US',
+  'America/Los_Angeles': 'US',
+  'America/Anchorage': 'US',
+  'Pacific/Honolulu': 'US',
+  'Europe/London': 'GB',
+  'America/Toronto': 'CA',
+  'America/Vancouver': 'CA',
+  'America/Edmonton': 'CA',
+  'America/Winnipeg': 'CA',
+  'America/Halifax': 'CA',
+  'Australia/Sydney': 'AU',
+  'Australia/Melbourne': 'AU',
+  'Australia/Brisbane': 'AU',
+  'Australia/Perth': 'AU',
+  'Australia/Adelaide': 'AU',
+  'Pacific/Auckland': 'NZ',
+  'Asia/Tokyo': 'JP',
+  'Asia/Shanghai': 'CN',
+  'Asia/Hong_Kong': 'HK',
+  'Asia/Seoul': 'KR',
+  'Asia/Taipei': 'TW',
+  'Europe/Moscow': 'RU',
+  'Europe/Kiev': 'UA',
+  'Europe/Kyiv': 'UA',
+  'Europe/Warsaw': 'PL',
+  'Europe/Prague': 'CZ',
+  'Europe/Budapest': 'HU',
+  'Europe/Stockholm': 'SE',
+  'Europe/Oslo': 'NO',
+  'Europe/Copenhagen': 'DK',
+  'Europe/Zurich': 'CH',
+  'Europe/Berlin': 'DE',
+  'Europe/Paris': 'FR',
+  'Europe/Rome': 'IT',
+  'Europe/Madrid': 'ES',
+  'Europe/Amsterdam': 'NL',
+  'Europe/Brussels': 'BE',
+  'Europe/Vienna': 'AT',
+  'Europe/Dublin': 'IE',
+  'Europe/Helsinki': 'FI',
+  'Europe/Lisbon': 'PT',
+  'Europe/Athens': 'GR',
+  'Europe/Luxembourg': 'LU',
+};
+
+class CurrencyDetector {
+  static String? cachedTimezone;
+  static String? overrideSymbol;
+
+  static String? countryFromTimezone() {
+    final tz = cachedTimezone;
+    if (tz == null || tz.isEmpty) return null;
+    return _timezoneToCountry[tz];
+  }
+}
+
+String _detectSymbolNoOverride() {
   String lang = '';
   String country = '';
 
@@ -137,8 +252,13 @@ String deviceCurrencySymbol(BuildContext? context) {
     } catch (_) {}
   }
 
-  if (country.isNotEmpty && _targetMarketSymbols.containsKey(country)) {
-    return _targetMarketSymbols[country]!;
+  final tzCountry = CurrencyDetector.countryFromTimezone();
+  if (tzCountry != null && targetMarketSymbols.containsKey(tzCountry)) {
+    return targetMarketSymbols[tzCountry]!;
+  }
+
+  if (country.isNotEmpty && targetMarketSymbols.containsKey(country)) {
+    return targetMarketSymbols[country]!;
   }
 
   try {
@@ -157,7 +277,15 @@ String deviceCurrencySymbol(BuildContext? context) {
   return '\$';
 }
 
+String deviceCurrencySymbol(BuildContext? context) {
+  final override = CurrencyDetector.overrideSymbol;
+  if (override != null && override.isNotEmpty) return override;
+  return _detectSymbolNoOverride();
+}
+
 String deviceCurrencySymbolStatic() => deviceCurrencySymbol(null);
+
+String autoDetectedCurrencySymbol() => _detectSymbolNoOverride();
 
 Map<String, String> currencyDebugInfo() {
   final info = <String, String>{};
@@ -174,6 +302,8 @@ Map<String, String> currencyDebugInfo() {
   } catch (e) {
     info['Platform.error'] = e.toString();
   }
+  info['Timezone'] = CurrencyDetector.cachedTimezone ?? '(null)';
+  info['Override'] = CurrencyDetector.overrideSymbol ?? '(none)';
   info['Resolved symbol'] = deviceCurrencySymbolStatic();
   return info;
 }

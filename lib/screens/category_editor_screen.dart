@@ -145,9 +145,11 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
                       children: [
                         Row(
                           children: [
-                            EmojiPlaceholderBox(
+                            EmojiPickerButton(
                               value: icon,
                               tint: Colors.purple,
+                              palette: categoryIconPalette,
+                              onPicked: (e) => sl(() => icon = e),
                             ),
                             const SizedBox(width: 10),
                             Expanded(

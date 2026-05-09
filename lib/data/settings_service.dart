@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils/currency_symbol.dart';
+
 enum BottomBarMode { tabs, dedicated }
 
 class SettingsService {
@@ -15,6 +17,7 @@ class SettingsService {
   static const _keyWelcomeSeen = 'welcome_seen';
   static const _keyAssistedMode = 'assisted_mode';
   static const _keyBottomBarMode = 'bottom_bar_mode';
+  static const _keyCurrencyOverride = 'currency_override';
 
   bool _useThousandSep = true;
   bool _smartDecimals = true;
@@ -26,6 +29,23 @@ class SettingsService {
     final sp = await SharedPreferences.getInstance();
     _useThousandSep = sp.getBool(_keyUseThousandSep) ?? true;
     _smartDecimals = sp.getBool(_keySmartDecimals) ?? true;
+    final override = sp.getString(_keyCurrencyOverride);
+    CurrencyDetector.overrideSymbol = (override == null || override.isEmpty)
+        ? null
+        : override;
+  }
+
+  String? get currencyOverride => CurrencyDetector.overrideSymbol;
+
+  Future<void> setCurrencyOverride(String? symbol) async {
+    final sp = await SharedPreferences.getInstance();
+    if (symbol == null || symbol.isEmpty) {
+      await sp.remove(_keyCurrencyOverride);
+      CurrencyDetector.overrideSymbol = null;
+    } else {
+      await sp.setString(_keyCurrencyOverride, symbol);
+      CurrencyDetector.overrideSymbol = symbol;
+    }
   }
 
   Future<void> setUseThousandSep(bool value) async {
