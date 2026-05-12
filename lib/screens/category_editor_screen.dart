@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../app.dart';
 import '../data/database_helper.dart';
 import '../tutorial/learn_button.dart';
 import '../models/category.dart';
@@ -181,21 +182,34 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
                   ),
                   if (suggestionsForEmoji(icon).isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    Text(
-                      'Quick names for $icon:',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(
-                          ctx,
-                        ).colorScheme.onSurface.withValues(alpha: 0.7),
-                        fontWeight: FontWeight.w500,
+                    ValueListenableBuilder<String>(
+                      valueListenable: handednessNotifier,
+                      builder: (_, hand, _) => Align(
+                        alignment: hand == 'left'
+                            ? Alignment.centerLeft
+                            : Alignment.centerRight,
+                        child: Text(
+                          'Quick names for $icon:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(
+                              ctx,
+                            ).colorScheme.onSurface.withValues(alpha: 0.7),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: suggestionsForEmoji(icon)
+                    ValueListenableBuilder<String>(
+                      valueListenable: handednessNotifier,
+                      builder: (_, hand, _) => Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        alignment: hand == 'left'
+                            ? WrapAlignment.start
+                            : WrapAlignment.end,
+                        children: suggestionsForEmoji(icon)
                           .map(
                             (s) => GestureDetector(
                               onTap: () => sl(() => nameCtrl.text = s),
@@ -222,6 +236,7 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
                             ),
                           )
                           .toList(),
+                      ),
                     ),
                   ],
                 ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../app.dart';
 import '../data/database_helper.dart';
 import '../tutorial/learn_button.dart';
 import '../models/bill_template.dart';
@@ -199,21 +200,34 @@ class _BillsScreenState extends State<BillsScreen>
 
                   if (selectedEmoji.isNotEmpty &&
                       suggestionsForEmoji(selectedEmoji).isNotEmpty) ...[
-                    Text(
-                      'Quick names for $selectedEmoji:',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(
-                          ctx,
-                        ).colorScheme.onSurface.withValues(alpha: 0.7),
-                        fontWeight: FontWeight.w500,
+                    ValueListenableBuilder<String>(
+                      valueListenable: handednessNotifier,
+                      builder: (_, hand, _) => Align(
+                        alignment: hand == 'left'
+                            ? Alignment.centerLeft
+                            : Alignment.centerRight,
+                        child: Text(
+                          'Quick names for $selectedEmoji:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(
+                              ctx,
+                            ).colorScheme.onSurface.withValues(alpha: 0.7),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: suggestionsForEmoji(selectedEmoji).map((s) {
+                    ValueListenableBuilder<String>(
+                      valueListenable: handednessNotifier,
+                      builder: (_, hand, _) => Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        alignment: hand == 'left'
+                            ? WrapAlignment.start
+                            : WrapAlignment.end,
+                        children: suggestionsForEmoji(selectedEmoji).map((s) {
                         final exists = categories.any(
                           (c) => c.name.toLowerCase() == s.toLowerCase(),
                         );
@@ -264,6 +278,7 @@ class _BillsScreenState extends State<BillsScreen>
                           ),
                         );
                       }).toList(),
+                      ),
                     ),
                     const SizedBox(height: 10),
                   ],
@@ -474,20 +489,33 @@ class _BillsScreenState extends State<BillsScreen>
                     ),
                     if (suggestionsForEmoji(selectedIcon).isNotEmpty) ...[
                       const SizedBox(height: 10),
-                      Text(
-                        'Quick names for $selectedIcon:',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ValueListenableBuilder<String>(
+                        valueListenable: handednessNotifier,
+                        builder: (_, hand, _) => Align(
+                          alignment: hand == 'left'
+                              ? Alignment.centerLeft
+                              : Alignment.centerRight,
+                          child: Text(
+                            'Quick names for $selectedIcon:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: suggestionsForEmoji(selectedIcon)
+                      ValueListenableBuilder<String>(
+                        valueListenable: handednessNotifier,
+                        builder: (_, hand, _) => Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          alignment: hand == 'left'
+                              ? WrapAlignment.start
+                              : WrapAlignment.end,
+                          children: suggestionsForEmoji(selectedIcon)
                             .map(
                               (s) => GestureDetector(
                                 onTap: () {
@@ -525,6 +553,7 @@ class _BillsScreenState extends State<BillsScreen>
                               ),
                             )
                             .toList(),
+                        ),
                       ),
                     ],
                     const SizedBox(height: 16),

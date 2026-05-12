@@ -1,5 +1,8 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../app.dart';
 import '../data/database_helper.dart';
 import '../models/category.dart';
 import '../models/income_source.dart';
@@ -46,6 +49,7 @@ class _AddEntryScreenState extends State<AddEntryScreen>
   final _nameFocus = FocusNode();
   final _amountFocus = FocusNode();
   final _scrollCtrl = ScrollController();
+  final _nameSuggestionsKey = GlobalKey();
 
   @override
   void initState() {
@@ -245,6 +249,30 @@ class _AddEntryScreenState extends State<AddEntryScreen>
       duration: const Duration(milliseconds: 260),
       curve: Curves.easeOut,
     );
+  }
+
+  void _ensureFieldVisible(BuildContext ctx) {
+    Future<void>.delayed(const Duration(milliseconds: 320), () {
+      if (!mounted) return;
+      final suggestCtx = _nameSuggestionsKey.currentContext;
+      if (suggestCtx != null && suggestCtx.mounted) {
+        Scrollable.ensureVisible(
+          suggestCtx,
+          alignment: 1.0,
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOut,
+        );
+        return;
+      }
+      if (ctx.mounted) {
+        Scrollable.ensureVisible(
+          ctx,
+          alignment: 0.05,
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   Future<void> _save() async {
@@ -824,14 +852,22 @@ class _AddEntryScreenState extends State<AddEntryScreen>
               textAlign: TextAlign.center,
             ),
           ),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 3,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 1,
-            children: _categoryTiles(),
+          ValueListenableBuilder<String>(
+            valueListenable: handednessNotifier,
+            builder: (_, hand, _) => Directionality(
+              textDirection: hand == 'left'
+                  ? ui.TextDirection.ltr
+                  : ui.TextDirection.rtl,
+              child: GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 3,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: 1,
+                children: _categoryTiles(),
+              ),
+            ),
           ),
         ],
       ),
@@ -840,39 +876,9 @@ class _AddEntryScreenState extends State<AddEntryScreen>
 
   List<Widget> _categoryTiles() {
     final cs = Theme.of(context).colorScheme;
-    final sorted = List<Category>.from(_categories.reversed);
+    final sorted = List<Category>.from(_categories);
     final widgets = <Widget>[];
 
-    widgets.add(
-      GestureDetector(
-        onTap: _addNewCategory,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: cs.surfaceContainerHighest,
-            border: Border.all(color: cs.outline),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.add,
-                size: 30,
-                color: cs.onSurface.withValues(alpha: 0.5),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'New',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: cs.onSurface.withValues(alpha: 0.5),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
     for (final c in sorted) {
       widgets.add(
         GestureDetector(
@@ -908,6 +914,36 @@ class _AddEntryScreenState extends State<AddEntryScreen>
         ),
       );
     }
+    widgets.add(
+      GestureDetector(
+        onTap: _addNewCategory,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: cs.surfaceContainerHighest,
+            border: Border.all(color: cs.outline),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.add,
+                size: 30,
+                color: cs.onSurface.withValues(alpha: 0.5),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'New',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: cs.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
     return widgets;
   }
 
@@ -927,39 +963,55 @@ class _AddEntryScreenState extends State<AddEntryScreen>
 
         _amountField(autofocus: false, hero: false),
         const SizedBox(height: 14),
-        TextField(
-          controller: _nameCtrl,
-          focusNode: _nameFocus,
-          autofocus: true,
-          textCapitalization: TextCapitalization.sentences,
-
-          textInputAction: TextInputAction.done,
-          style: const TextStyle(fontSize: 17),
-          onSubmitted: (v) {
-            setState(() => _name = v.trim());
-            _commitFromName();
-          },
-          decoration: const InputDecoration(
-            labelText: 'Name',
-            hintText: 'e.g. Lunch, Bus fare, Groceries',
-            border: OutlineInputBorder(),
+        Builder(
+          builder: (fieldCtx) => TextField(
+            controller: _nameCtrl,
+            focusNode: _nameFocus,
+            autofocus: true,
+            textCapitalization: TextCapitalization.sentences,
+            textInputAction: TextInputAction.done,
+            style: const TextStyle(fontSize: 17),
+            onTap: () => _ensureFieldVisible(fieldCtx),
+            onSubmitted: (v) {
+              setState(() => _name = v.trim());
+              _commitFromName();
+            },
+            decoration: const InputDecoration(
+              labelText: 'Name',
+              hintText: 'e.g. Lunch, Bus fare, Groceries',
+              border: OutlineInputBorder(),
+            ),
           ),
         ),
         const SizedBox(height: 14),
         if (_suggestions.isNotEmpty) ...[
-          Text(
-            'Suggestions from past entries:',
-            style: TextStyle(
-              fontSize: 12,
-              color: cs.onSurface.withValues(alpha: 0.55),
+          ValueListenableBuilder<String>(
+            valueListenable: handednessNotifier,
+            builder: (_, hand, _) => Align(
+              alignment: hand == 'left'
+                  ? Alignment.centerLeft
+                  : Alignment.centerRight,
+              child: Text(
+                'Suggestions from past entries:',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: cs.onSurface.withValues(alpha: 0.55),
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _suggestions.reversed
-                .map(
+          ValueListenableBuilder<String>(
+            valueListenable: handednessNotifier,
+            builder: (_, hand, _) => Wrap(
+              key: _nameSuggestionsKey,
+              spacing: 8,
+              runSpacing: 8,
+              alignment: hand == 'left'
+                  ? WrapAlignment.start
+                  : WrapAlignment.end,
+              children: _suggestions.reversed
+                  .map(
                   (s) => GestureDetector(
                     onTap: () {
                       _nameCtrl.text = s;
@@ -989,6 +1041,7 @@ class _AddEntryScreenState extends State<AddEntryScreen>
                   ),
                 )
                 .toList(),
+            ),
           ),
         ],
         const SizedBox(height: 20),
@@ -1326,21 +1379,34 @@ class _AddEntryScreenState extends State<AddEntryScreen>
 
                   if (iconCtrl.text.isNotEmpty &&
                       suggestionsForEmoji(iconCtrl.text).isNotEmpty) ...[
-                    Text(
-                      'Quick names for ${iconCtrl.text}:',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(
-                          ctx,
-                        ).colorScheme.onSurface.withValues(alpha: 0.7),
-                        fontWeight: FontWeight.w500,
+                    ValueListenableBuilder<String>(
+                      valueListenable: handednessNotifier,
+                      builder: (_, hand, _) => Align(
+                        alignment: hand == 'left'
+                            ? Alignment.centerLeft
+                            : Alignment.centerRight,
+                        child: Text(
+                          'Quick names for ${iconCtrl.text}:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(
+                              ctx,
+                            ).colorScheme.onSurface.withValues(alpha: 0.7),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: suggestionsForEmoji(iconCtrl.text).map((s) {
+                    ValueListenableBuilder<String>(
+                      valueListenable: handednessNotifier,
+                      builder: (_, hand, _) => Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        alignment: hand == 'left'
+                            ? WrapAlignment.start
+                            : WrapAlignment.end,
+                        children: suggestionsForEmoji(iconCtrl.text).map((s) {
                         final exists = _categories.any(
                           (c) => c.name.toLowerCase() == s.toLowerCase(),
                         );
@@ -1394,6 +1460,7 @@ class _AddEntryScreenState extends State<AddEntryScreen>
                           ),
                         );
                       }).toList(),
+                      ),
                     ),
                     const SizedBox(height: 10),
                   ],

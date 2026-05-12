@@ -1,6 +1,8 @@
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
 
+import '../app.dart';
+
 Future<String?> showEmojiPickerSheet(
   BuildContext context, {
   required List<String> palette,
@@ -192,40 +194,47 @@ class InlineEmojiPalette extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return SizedBox(
-      height: tileSize + 6,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
-        itemCount: palette.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 6),
-        itemBuilder: (_, i) {
-          final e = palette[i];
-          final sel = e == selected;
-          return GestureDetector(
-            onTap: () => onPicked(e),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              curve: Curves.easeOutCubic,
-              width: tileSize,
-              height: tileSize,
-              decoration: BoxDecoration(
-                color: sel
-                    ? tint.withValues(alpha: 0.22)
-                    : cs.surfaceContainerHighest.withValues(alpha: 0.45),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: sel ? tint : cs.outline.withValues(alpha: 0.25),
-                  width: sel ? 1.8 : 1,
+    return ValueListenableBuilder<String>(
+      valueListenable: handednessNotifier,
+      builder: (_, hand, _) {
+        final reverse = hand != 'left';
+        return SizedBox(
+          height: tileSize + 6,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            reverse: reverse,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+            itemCount: palette.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 6),
+            itemBuilder: (_, i) {
+              final e = palette[i];
+              final sel = e == selected;
+              return GestureDetector(
+                onTap: () => onPicked(e),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  curve: Curves.easeOutCubic,
+                  width: tileSize,
+                  height: tileSize,
+                  decoration: BoxDecoration(
+                    color: sel
+                        ? tint.withValues(alpha: 0.22)
+                        : cs.surfaceContainerHighest.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: sel ? tint : cs.outline.withValues(alpha: 0.25),
+                      width: sel ? 1.8 : 1,
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(e, style: const TextStyle(fontSize: 22)),
                 ),
-              ),
-              alignment: Alignment.center,
-              child: Text(e, style: const TextStyle(fontSize: 22)),
-            ),
-          );
-        },
-      ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

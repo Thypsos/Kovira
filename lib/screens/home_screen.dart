@@ -1803,6 +1803,22 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _expenseSection(Map<int, int> categoryTotals) {
     final monthName = DateFormat('MMMM').format(DateTime.now());
     final cs = Theme.of(context).colorScheme;
+    final lastUsed = <int, DateTime>{};
+    for (final e in entries) {
+      if (e.type != 'expense') continue;
+      final prev = lastUsed[e.categoryId];
+      if (prev == null || e.date.isAfter(prev)) {
+        lastUsed[e.categoryId] = e.date;
+      }
+    }
+    final sortedCategories = [...categories]..sort((a, b) {
+      final ad = lastUsed[a.id];
+      final bd = lastUsed[b.id];
+      if (ad == null && bd == null) return 0;
+      if (ad == null) return 1;
+      if (bd == null) return -1;
+      return bd.compareTo(ad);
+    });
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1813,7 +1829,7 @@ class _HomeScreenState extends State<HomeScreen>
         const SizedBox(height: 8),
         _inOutHotbar(),
         const SizedBox(height: 12),
-        ...categories.map((c) {
+        ...sortedCategories.map((c) {
           final total = categoryTotals[c.id] ?? 0;
           if (total == 0) return const SizedBox.shrink();
           return Card(

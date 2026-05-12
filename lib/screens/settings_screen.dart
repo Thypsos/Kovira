@@ -545,6 +545,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 18),
                 divider,
                 const SizedBox(height: 14),
+                ValueListenableBuilder<String>(
+                  valueListenable: handednessNotifier,
+                  builder: (_, hand, _) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 320),
+                              transitionBuilder: (child, anim) =>
+                                  RotationTransition(
+                                    turns: Tween<double>(
+                                      begin: 0.75,
+                                      end: 1,
+                                    ).animate(anim),
+                                    child: FadeTransition(
+                                      opacity: anim,
+                                      child: child,
+                                    ),
+                                  ),
+                              child: Icon(
+                                hand == 'left'
+                                    ? Icons.swipe_left_outlined
+                                    : Icons.swipe_right_outlined,
+                                key: ValueKey(hand),
+                                size: 24,
+                                color: cs.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            const Text(
+                              'Handedness',
+                              style: TextStyle(fontSize: 17),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            _handednessBtn('Right', 'right', hand, cs),
+                            const SizedBox(width: 8),
+                            _handednessBtn('Left', 'left', hand, cs),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 18),
+                divider,
+                const SizedBox(height: 14),
                 Row(
                   children: [
                     AnimatedSwitcher(
@@ -846,6 +898,81 @@ class _SettingsScreenState extends State<SettingsScreen> {
         },
       ),
     );
+  }
+
+  Widget _handednessBtn(
+    String label,
+    String value,
+    String current,
+    ColorScheme cs,
+  ) {
+    final sel = current == value;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final unselectedBg = isDark
+        ? cs.surfaceContainerHighest
+        : Color.lerp(cs.primary, Colors.white, 0.78)!;
+    final unselectedBorder = isDark
+        ? Colors.transparent
+        : Color.lerp(cs.primary, Colors.white, 0.55)!;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _setHandedness(value),
+        child: AnimatedScale(
+          duration: const Duration(milliseconds: 160),
+          scale: sel ? 1.04 : 1.0,
+          curve: Curves.easeOut,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: sel ? cs.primary : unselectedBg,
+              borderRadius: BorderRadius.circular(10),
+              border: sel
+                  ? null
+                  : Border.all(color: unselectedBorder, width: 1),
+              boxShadow: sel
+                  ? [
+                      BoxShadow(
+                        color: cs.primary.withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  value == 'left'
+                      ? Icons.back_hand_outlined
+                      : Icons.front_hand_outlined,
+                  size: 18,
+                  color: sel ? cs.onPrimary : cs.onSurface,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: sel ? cs.onPrimary : cs.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _setHandedness(String value) async {
+    await SettingsService.instance.setHandedness(value);
+    handednessNotifier.value = value;
   }
 
   Widget _barModeBtn(

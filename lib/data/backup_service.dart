@@ -391,19 +391,26 @@ class BackupService {
       final existing = await driveApi.files.list(
         q: "name='$_driveFileName' and trashed=false",
         spaces: 'drive',
-        $fields: 'files(id)',
+        $fields: 'files(id,modifiedTime)',
+        orderBy: 'modifiedTime desc',
       );
-      if (existing.files != null && existing.files!.isNotEmpty) {
-        await driveApi.files.update(
-          drive.File(),
-          existing.files!.first.id!,
-          uploadMedia: media,
-        );
-      } else {
+      final files = existing.files ?? const <drive.File>[];
+      if (files.isEmpty) {
         await driveApi.files.create(
           drive.File()..name = _driveFileName,
           uploadMedia: media,
         );
+      } else {
+        await driveApi.files.update(
+          drive.File()..modifiedTime = DateTime.now().toUtc(),
+          files.first.id!,
+          uploadMedia: media,
+        );
+        for (var i = 1; i < files.length; i++) {
+          try {
+            await driveApi.files.delete(files[i].id!);
+          } catch (_) {}
+        }
       }
       if (!context.mounted) return;
       final cs = Theme.of(context).colorScheme;
@@ -471,6 +478,7 @@ class BackupService {
         q: "name='$_driveFileName' and trashed=false",
         spaces: 'drive',
         $fields: 'files(id,modifiedTime)',
+        orderBy: 'modifiedTime desc',
       );
       if (existing.files == null || existing.files!.isEmpty) {
         if (!context.mounted) return;

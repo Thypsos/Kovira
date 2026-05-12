@@ -17,6 +17,8 @@ final ValueNotifier<BottomBarMode> bottomBarModeNotifier =
 
 final ValueNotifier<int> currencySymbolNotifier = ValueNotifier<int>(0);
 
+final ValueNotifier<String> handednessNotifier = ValueNotifier<String>('right');
+
 class KoviraApp extends StatefulWidget {
   const KoviraApp({super.key});
   @override
@@ -53,9 +55,11 @@ class _KoviraAppState extends State<KoviraApp> {
     final mode = await SettingsService.instance.getThemeMode();
     final seen = await SettingsService.instance.hasSeenWelcome();
     final barMode = await SettingsService.instance.getBottomBarMode();
+    final hand = await SettingsService.instance.getHandedness();
     if (mounted) {
       themeModeNotifier.value = mode;
       bottomBarModeNotifier.value = barMode;
+      handednessNotifier.value = hand;
       setState(() {
         _welcomeSeen = seen;
         _loaded = true;
