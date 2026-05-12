@@ -32,7 +32,7 @@ class DatabaseHelper {
         final preOpen = await openReadOnlyDatabase(path);
         final storedVersion = await preOpen.getVersion();
         await preOpen.close();
-        if (storedVersion < 17 && storedVersion > 0) {
+        if (storedVersion < 18 && storedVersion > 0) {
           final docs = await getApplicationDocumentsDirectory();
           final stamp = DateTime.now()
               .toIso8601String()
@@ -50,7 +50,7 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 17,
+      version: 18,
       onCreate: (db, version) async {
         await db.execute('''CREATE TABLE categories (
           id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, icon TEXT NOT NULL, useCount INTEGER NOT NULL DEFAULT 0, color INTEGER
@@ -78,7 +78,7 @@ class DatabaseHelper {
         await db.execute('''CREATE TABLE bill_templates (
           id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, icon TEXT NOT NULL,
           categoryId INTEGER NOT NULL, sourceId INTEGER NOT NULL, amount INTEGER NOT NULL DEFAULT 0,
-          isFixed INTEGER NOT NULL DEFAULT 1
+          isFixed INTEGER NOT NULL DEFAULT 1, cadence TEXT NOT NULL DEFAULT 'monthly'
         )''');
         await db.execute('''CREATE TABLE transfer_templates (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -405,6 +405,13 @@ class DatabaseHelper {
               {'name': 'Transfer fees'},
               where: 'name = ?',
               whereArgs: ['Fees'],
+            );
+          } catch (_) {}
+        }
+        if (oldVersion < 18) {
+          try {
+            await db.execute(
+              "ALTER TABLE bill_templates ADD COLUMN cadence TEXT NOT NULL DEFAULT 'monthly'",
             );
           } catch (_) {}
         }

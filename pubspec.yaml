@@ -1,7 +1,7 @@
 name: kovira
 description: 'Kovira - personal ledger for mixed cash and digital economies'
 publish_to: 'none'
-version: 3.1.1+195
+version: 3.1.2+196
 
 environment:
     sdk: ^3.10.4

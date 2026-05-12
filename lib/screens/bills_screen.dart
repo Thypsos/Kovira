@@ -90,11 +90,25 @@ class _BillsScreenState extends State<BillsScreen>
     categories = await db.getCategories();
     sources = await db.getActiveSources();
     final monthEntries = await db.getEntriesForMonth(DateTime.now());
+    final now = DateTime.now();
+    final weekStart = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(Duration(days: now.weekday - 1));
     final counts = <int, int>{};
     for (final e in monthEntries) {
       if (e.type != 'expense') continue;
       final id = e.billTemplateId;
       if (id == null) continue;
+      final bill = bills.where((b) => b.id == id).firstOrNull;
+      if (bill == null) continue;
+      final inPeriod = switch (bill.cadence) {
+        BillCadence.weekly => !e.date.isBefore(weekStart),
+        BillCadence.monthly => true,
+        BillCadence.onDemand => true,
+      };
+      if (!inPeriod) continue;
       counts[id] = (counts[id] ?? 0) + 1;
     }
     _billPaymentsThisMonth = counts;
@@ -419,6 +433,7 @@ class _BillsScreenState extends State<BillsScreen>
     );
     final nameFocus = FocusNode();
     bool isFixed = existing?.isFixed ?? true;
+    BillCadence cadence = existing?.cadence ?? BillCadence.monthly;
     String selectedIcon = (existing?.icon ?? '').isEmpty
         ? '🧾'
         : existing!.icon;
@@ -603,6 +618,22 @@ class _BillsScreenState extends State<BillsScreen>
                         ),
                       ),
                     ],
+                    const SizedBox(height: 16),
+                    const Text(
+                      'How often does this repeat?',
+                      style: TextStyle(fontSize: 15),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      children: BillCadence.values.map((c) {
+                        return ChoiceChip(
+                          label: Text(billCadenceLabel(c)),
+                          selected: cadence == c,
+                          onSelected: (_) => setDlg(() => cadence = c),
+                        );
+                      }).toList(),
+                    ),
                   ],
                 ),
               ),
@@ -657,6 +688,7 @@ class _BillsScreenState extends State<BillsScreen>
       sourceId: 0,
       amount: isFixed ? (parseCents(amountCtrl.text) ?? 0) : 0,
       isFixed: isFixed,
+      cadence: cadence,
     );
     final wasFirstBill = existing == null && bills.isEmpty;
     if (existing == null) {
@@ -1112,7 +1144,26 @@ class _BillsScreenState extends State<BillsScreen>
                 ...bills.asMap().entries.map((entry) {
                   final b = entry.value;
                   final cat = _catOf(b.categoryId);
+                  final paidCount = _billPaymentsThisMonth[b.id] ?? 0;
+                  final isDark =
+                      Theme.of(context).brightness == Brightness.dark;
+                  final paidBg = isDark
+                      ? Colors.green.withValues(alpha: 0.22)
+                      : Colors.green.withValues(alpha: 0.16);
+                  final paidBorder = Colors.green.withValues(alpha: 0.55);
+                  final periodLabel = switch (b.cadence) {
+                    BillCadence.weekly => 'this week',
+                    BillCadence.monthly => 'this month',
+                    BillCadence.onDemand => 'this month',
+                  };
                   final card = Card(
+                    color: paidCount > 0 ? paidBg : null,
+                    shape: paidCount > 0
+                        ? RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: paidBorder, width: 1.2),
+                          )
+                        : null,
                     child: ListTile(
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -1122,46 +1173,43 @@ class _BillsScreenState extends State<BillsScreen>
                         b.icon,
                         style: const TextStyle(fontSize: 32),
                       ),
-                      title: Row(
+                      title: Text(
+                        b.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Expanded(
-                            child: Text(
-                              b.name,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                          Text(
+                            '${cat?.icon ?? ''} ${cat?.name ?? ''}'
+                            '${b.isFixed ? ' · ${formatMoney(b.amount)}' : ' · variable'}'
+                            ' · ${billCadenceLabel(b.cadence)}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: cs.onSurface.withValues(alpha: 0.5),
                             ),
                           ),
-                          if ((_billPaymentsThisMonth[b.id] ?? 0) > 0) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.green.withValues(alpha: 0.18),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: Colors.green.withValues(alpha: 0.55),
-                                  width: 1,
-                                ),
-                              ),
+                          if (paidCount > 0)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   const Icon(
                                     Icons.check_circle,
-                                    size: 12,
+                                    size: 14,
                                     color: Colors.green,
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    'Paid · ${_billPaymentsThisMonth[b.id]}x',
+                                    'Paid ${paidCount}x $periodLabel',
                                     style: const TextStyle(
-                                      fontSize: 11,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.w700,
                                       color: Colors.green,
                                     ),
@@ -1169,16 +1217,7 @@ class _BillsScreenState extends State<BillsScreen>
                                 ],
                               ),
                             ),
-                          ],
                         ],
-                      ),
-                      subtitle: Text(
-                        '${cat?.icon ?? ''} ${cat?.name ?? ''}'
-                        '${b.isFixed ? ' · ${formatMoney(b.amount)}' : ' · variable'}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: cs.onSurface.withValues(alpha: 0.5),
-                        ),
                       ),
                       trailing: Container(
                         padding: const EdgeInsets.symmetric(
