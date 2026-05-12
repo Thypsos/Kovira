@@ -1,5 +1,3 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../app.dart';
@@ -56,6 +54,7 @@ class _AddEntryScreenState extends State<AddEntryScreen>
     super.initState();
     _date = widget.existing?.date ?? DateTime.now();
     _loadData();
+    _nameFocus.addListener(_onNameFocusChange);
     if (widget.existing == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -64,6 +63,27 @@ class _AddEntryScreenState extends State<AddEntryScreen>
         }
       });
     }
+  }
+
+  void _onNameFocusChange() {
+    if (!_nameFocus.hasFocus) return;
+    _scheduleScrollToBottom();
+  }
+
+  void _scheduleScrollToBottom() {
+    void doScroll() {
+      if (!mounted) return;
+      if (!_scrollCtrl.hasClients) return;
+      _scrollCtrl.animateTo(
+        _scrollCtrl.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    }
+
+    Future<void>.delayed(const Duration(milliseconds: 250), doScroll);
+    Future<void>.delayed(const Duration(milliseconds: 550), doScroll);
+    Future<void>.delayed(const Duration(milliseconds: 900), doScroll);
   }
 
   bool _dialogTutorialInFlight = false;
@@ -125,6 +145,7 @@ class _AddEntryScreenState extends State<AddEntryScreen>
 
   @override
   void dispose() {
+    _nameFocus.removeListener(_onNameFocusChange);
     _nameCtrl.dispose();
     _amountCtrl.dispose();
     _nameFocus.dispose();
@@ -852,98 +873,108 @@ class _AddEntryScreenState extends State<AddEntryScreen>
               textAlign: TextAlign.center,
             ),
           ),
-          ValueListenableBuilder<String>(
-            valueListenable: handednessNotifier,
-            builder: (_, hand, _) => Directionality(
-              textDirection: hand == 'left'
-                  ? ui.TextDirection.ltr
-                  : ui.TextDirection.rtl,
-              child: GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 3,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 1,
-                children: _categoryTiles(),
-              ),
-            ),
+          LayoutBuilder(
+            builder: (ctx, c) {
+              final tileSize = ((c.maxWidth - 20) / 3).clamp(80.0, 140.0);
+              return ValueListenableBuilder<String>(
+                valueListenable: handednessNotifier,
+                builder: (_, hand, _) => Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  alignment: hand == 'left'
+                      ? WrapAlignment.start
+                      : WrapAlignment.end,
+                  children: _categoryTiles(tileSize),
+                ),
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  List<Widget> _categoryTiles() {
+  List<Widget> _categoryTiles(double tileSize) {
     final cs = Theme.of(context).colorScheme;
-    final sorted = List<Category>.from(_categories);
+    final sorted = List<Category>.from(_categories.reversed);
     final widgets = <Widget>[];
 
-    for (final c in sorted) {
-      widgets.add(
-        GestureDetector(
-          onTap: () async {
-            setState(() => _cat = c);
-            _suggestions = await DatabaseHelper.instance.getSuggestions(c.id!);
-            _advance();
-          },
+    widgets.add(
+      SizedBox(
+        width: tileSize,
+        height: tileSize,
+        child: GestureDetector(
+          onTap: _addNewCategory,
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               color: cs.surfaceContainerHighest,
+              border: Border.all(color: cs.outline),
             ),
-            padding: const EdgeInsets.all(6),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                RawCategoryIcon(icon: c.icon, color: c.color, size: 26),
-                const SizedBox(height: 6),
+                Icon(
+                  Icons.add,
+                  size: 30,
+                  color: cs.onSurface.withValues(alpha: 0.5),
+                ),
+                const SizedBox(height: 4),
                 Text(
-                  c.name,
-                  style: const TextStyle(
+                  'New',
+                  style: TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                    color: cs.onSurface.withValues(alpha: 0.5),
                   ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  textAlign: TextAlign.center,
                 ),
               ],
             ),
           ),
         ),
-      );
-    }
-    widgets.add(
-      GestureDetector(
-        onTap: _addNewCategory,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: cs.surfaceContainerHighest,
-            border: Border.all(color: cs.outline),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.add,
-                size: 30,
-                color: cs.onSurface.withValues(alpha: 0.5),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'New',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: cs.onSurface.withValues(alpha: 0.5),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
+
+    for (final c in sorted) {
+      widgets.add(
+        SizedBox(
+          width: tileSize,
+          height: tileSize,
+          child: GestureDetector(
+            onTap: () async {
+              setState(() => _cat = c);
+              _suggestions = await DatabaseHelper.instance.getSuggestions(
+                c.id!,
+              );
+              _advance();
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: cs.surfaceContainerHighest,
+              ),
+              padding: const EdgeInsets.all(6),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  RawCategoryIcon(icon: c.icon, color: c.color, size: 26),
+                  const SizedBox(height: 6),
+                  Text(
+                    c.name,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return widgets;
   }
 

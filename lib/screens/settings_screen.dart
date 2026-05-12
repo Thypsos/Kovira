@@ -585,9 +585,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            _handednessBtn('Right', 'right', hand, cs),
-                            const SizedBox(width: 8),
                             _handednessBtn('Left', 'left', hand, cs),
+                            const SizedBox(width: 8),
+                            _handednessBtn('Right', 'right', hand, cs),
                           ],
                         ),
                       ],

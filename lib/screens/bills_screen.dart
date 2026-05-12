@@ -75,6 +75,7 @@ class _BillsScreenState extends State<BillsScreen>
   List<BillTemplate> bills = [];
   List<Category> categories = [];
   List<IncomeSource> sources = [];
+  Map<int, int> _billPaymentsThisMonth = {};
   final FocusNode _amountFocus = FocusNode();
 
   @override
@@ -88,6 +89,15 @@ class _BillsScreenState extends State<BillsScreen>
     bills = await db.getBillTemplates();
     categories = await db.getCategories();
     sources = await db.getActiveSources();
+    final monthEntries = await db.getEntriesForMonth(DateTime.now());
+    final counts = <int, int>{};
+    for (final e in monthEntries) {
+      if (e.type != 'expense') continue;
+      final id = e.billTemplateId;
+      if (id == null) continue;
+      counts[id] = (counts[id] ?? 0) + 1;
+    }
+    _billPaymentsThisMonth = counts;
     setState(() {});
   }
 
@@ -1112,12 +1122,55 @@ class _BillsScreenState extends State<BillsScreen>
                         b.icon,
                         style: const TextStyle(fontSize: 32),
                       ),
-                      title: Text(
-                        b.name,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      title: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              b.name,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if ((_billPaymentsThisMonth[b.id] ?? 0) > 0) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Colors.green.withValues(alpha: 0.55),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.check_circle,
+                                    size: 12,
+                                    color: Colors.green,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Paid · ${_billPaymentsThisMonth[b.id]}x',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       subtitle: Text(
                         '${cat?.icon ?? ''} ${cat?.name ?? ''}'
