@@ -48,6 +48,7 @@ class _AddEntryScreenState extends State<AddEntryScreen>
   final _amountFocus = FocusNode();
   final _scrollCtrl = ScrollController();
   final _nameSuggestionsKey = GlobalKey();
+  bool _forceExit = false;
 
   @override
   void initState() {
@@ -352,7 +353,7 @@ class _AddEntryScreenState extends State<AddEntryScreen>
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: _phase == _Phase.paidOrDue,
+      canPop: _forceExit || _phase == _Phase.paidOrDue,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _back();
       },
@@ -385,6 +386,14 @@ class _AddEntryScreenState extends State<AddEntryScreen>
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           ),
           actions: [
+            IconButton(
+              tooltip: 'Discard and close',
+              onPressed: () {
+                setState(() => _forceExit = true);
+                Navigator.of(context).maybePop();
+              },
+              icon: const Icon(Icons.close, size: 26),
+            ),
             IconButton(
               tooltip: 'Tap to learn this dialog',
               onPressed: _runDialogTutorial,
